@@ -1,10 +1,6 @@
-# Sysible bits (the metapackage pulls the whole toolkit)
-sysible-release
-sysible-workstation
-# GNOME + login
+# Debian-provided pieces (the Sysible packages are included via config/packages.chroot)
 gnome-core
 gdm3
-# Live system + graphical installer
 live-boot
 live-config
 live-config-systemd
