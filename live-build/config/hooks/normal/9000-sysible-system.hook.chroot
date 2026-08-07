@@ -29,3 +29,7 @@ rm -f  /usr/share/backgrounds/*.jpg /usr/share/backgrounds/*.png 2>/dev/null || 
 rm -f /usr/share/applications/calamares.desktop \
       /usr/share/applications/calamares-debian.desktop \
       /usr/share/applications/install-debian.desktop
+
+# Refresh the icon cache so the Sysible SysTerm icon (shipped via includes.chroot
+# to override the packaged one) and other hicolor icons resolve.
+gtk-update-icon-cache -f /usr/share/icons/hicolor 2>/dev/null || true
