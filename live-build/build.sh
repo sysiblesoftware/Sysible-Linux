@@ -82,39 +82,25 @@ awk '
 echo "Debian toolkit: $(grep -c . config/package-lists/sysible-toolkit.list.chroot) packages (vendor tools via hook)."
 
 # --- assemble -------------------------------------------------------------
+# Boot branding is done with source-level bootloader overrides that live-build
+# consumes while building the ISO: config/bootloaders/isolinux/ (BIOS menu title
+# + Sysible splash) and config/binary_grub/ (UEFI background). These are checked
+# in, not generated, so they don't depend on where a given live-build keeps its
+# templates.
 lb clean --purge || true
 lb config
-
-# --- brand the isolinux (BIOS) boot menu ----------------------------------
-# live-build assembles isolinux during binary_iso — which runs AFTER binary
-# hooks — so branding must be a source-level bootloader override (config/
-# bootloaders/isolinux/), applied while the ISO is built. Base it on live-build's
-# own templates so it stays format-compatible, then patch title/labels + splash.
-ISO_TPL="/usr/share/live/build/bootloaders/isolinux"
-if [ -d "$ISO_TPL" ] && [ -f config/branding/splash.png ]; then
-    echo "== branding isolinux boot menu (source override) =="
-    rm -rf config/bootloaders/isolinux
-    mkdir -p config/bootloaders/isolinux
-    cp -a "$ISO_TPL"/. config/bootloaders/isolinux/
-    sed -i 's/^menu title .*/menu title Sysible Linux/' config/bootloaders/isolinux/menu.cfg 2>/dev/null || true
-    for cfg in config/bootloaders/isolinux/*.cfg config/bootloaders/isolinux/*.cfg.in; do
-        [ -f "$cfg" ] || continue
-        sed -i -e 's/Live system (\(.*\) fail-safe mode)/Sysible Linux (Live, safe graphics) [\1]/g' \
-               -e 's/Live system (\(.*\))/Sysible Linux (Live) [\1]/g' \
-               -e 's/\^Live (@FLAVOUR@ failsafe)/Sysible Linux (Live, safe graphics)/g' \
-               -e 's/\^Live (@FLAVOUR@)/Sysible Linux (Live)/g' \
-               -e 's|Debian GNU/Linux|Sysible Linux|g' "$cfg"
-    done
-    # Sysible splash: wrap our PNG in an SVG so whichever way live-build renders
-    # the splash, the result is Sysible art; also drop the PNG directly.
-    b64=$(base64 -w0 config/branding/splash.png)
-    printf '%s' "<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" width=\"640\" height=\"480\"><image width=\"640\" height=\"480\" xlink:href=\"data:image/png;base64,${b64}\"/></svg>" \
-        > config/bootloaders/isolinux/splash.svg
-    cp config/bootloaders/isolinux/splash.svg config/bootloaders/isolinux/splash.svg.in 2>/dev/null || true
-    cp config/branding/splash.png config/bootloaders/isolinux/splash.png
-    echo "-- patched menu.cfg --";     sed -n '1,8p' config/bootloaders/isolinux/menu.cfg 2>/dev/null || true
-    echo "-- patched live.cfg.in --";  sed -n '1,12p' config/bootloaders/isolinux/live.cfg.in 2>/dev/null || true
-    echo "-- isolinux override files --"; ls -1 config/bootloaders/isolinux/
-fi
-
 $SUDO lb build
+
+# --- verify boot branding landed in the built tree -------------------------
+# binary/ persists after lb build, so we can prove the overrides were consumed
+# without downloading the ISO. Look for our title + splash in the assembled tree.
+echo "===== POST-BUILD boot-branding verification ====="
+for f in $(find binary -maxdepth 4 -name 'menu.cfg' -o -maxdepth 4 -name 'grub.cfg' 2>/dev/null); do
+    echo "----- $f -----"; grep -iE 'menu title|Sysible|Debian GNU' "$f" 2>/dev/null | head
+done
+echo "----- splash images in built tree -----"
+find binary -maxdepth 4 -name 'splash.*' -exec ls -la {} \; 2>/dev/null
+for sp in $(find binary -maxdepth 4 -name 'splash.png' 2>/dev/null); do
+    echo "md5 $sp vs our override:"; md5sum "$sp" config/bootloaders/isolinux/splash.png 2>/dev/null
+done
+echo "===== end verification ====="
