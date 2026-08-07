@@ -6,6 +6,10 @@ set -e
 export DEBIAN_FRONTEND=noninteractive
 echo "== Sysible: installing vendor tools =="
 
+# All network fetches use bounded timeouts + retries so a stalled connection
+# fails fast (and retries) instead of hanging the whole ISO build indefinitely.
+CURL="curl -fsSL --connect-timeout 20 --max-time 600 --retry 3 --retry-delay 3"
+
 # The live-build chroot can come up with an unpopulated CA trust store — every
 # HTTPS then fails with "unable to get local issuer certificate", which kills the
 # key fetch AND the vendor apt repos. Rebuild it from the shipped roots (and any
@@ -16,7 +20,7 @@ apt-get install -y --reinstall ca-certificates >/dev/null 2>&1 \
 update-ca-certificates --fresh >/dev/null 2>&1 || update-ca-certificates || true
 certs=$(grep -c 'BEGIN CERTIFICATE' /etc/ssl/certs/ca-certificates.crt 2>/dev/null || echo 0)
 echo "   trusted roots: $certs"
-if ! curl -fsS -o /dev/null https://download.docker.com/linux/debian/gpg; then
+if ! curl -fsS --connect-timeout 20 --max-time 60 -o /dev/null https://download.docker.com/linux/debian/gpg; then
     echo "FATAL: HTTPS still fails to verify inside the chroot after rebuilding the"
     echo "       CA store. The build network is intercepting TLS with a private CA."
     echo "       Build on a clean network (the GitHub Actions runner) or drop the"
@@ -43,20 +47,20 @@ apt-get install -y --no-install-recommends \
 
 # helm: official binary (get.helm.sh is Google-hosted, complete chain). Required.
 echo "== helm (official binary) =="
-helm_ver=$(curl -fsSL https://api.github.com/repos/helm/helm/releases/latest \
+helm_ver=$($CURL https://api.github.com/repos/helm/helm/releases/latest \
     | grep -oE '"tag_name": *"v[0-9.]+"' | grep -oE 'v[0-9.]+' | head -1)
 [ -n "$helm_ver" ] || helm_ver=v3.16.3
-curl -fsSL "https://get.helm.sh/helm-${helm_ver}-linux-amd64.tar.gz" \
+$CURL "https://get.helm.sh/helm-${helm_ver}-linux-amd64.tar.gz" \
     | tar xz -C /tmp linux-amd64/helm
 install -m0755 /tmp/linux-amd64/helm /usr/local/bin/helm
 helm version --short || true
 
 # opentofu: official GitHub-release binary. Required.
 echo "== opentofu (official binary) =="
-tofu_ver=$(curl -fsSL https://api.github.com/repos/opentofu/opentofu/releases/latest \
+tofu_ver=$($CURL https://api.github.com/repos/opentofu/opentofu/releases/latest \
     | grep -oE '"tag_name": *"v[0-9.]+"' | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
 [ -n "$tofu_ver" ] || tofu_ver=1.8.5
-curl -fsSL "https://github.com/opentofu/opentofu/releases/download/v${tofu_ver}/tofu_${tofu_ver}_linux_amd64.tar.gz" \
+$CURL "https://github.com/opentofu/opentofu/releases/download/v${tofu_ver}/tofu_${tofu_ver}_linux_amd64.tar.gz" \
     | tar xz -C /usr/local/bin tofu
 chmod 0755 /usr/local/bin/tofu
 tofu version || true
@@ -64,13 +68,13 @@ tofu version || true
 # GitHub-release binaries (no apt repo): k9s, eza, sops. Best-effort — a hiccup
 # fetching one must not fail the whole ISO.
 echo "== GitHub-release binaries =="
-( curl -fsSL https://github.com/derailed/k9s/releases/latest/download/k9s_Linux_amd64.tar.gz \
+( $CURL https://github.com/derailed/k9s/releases/latest/download/k9s_Linux_amd64.tar.gz \
     | tar xz -C /usr/local/bin k9s ) 2>/dev/null && echo "k9s ok" || echo "k9s skipped"
-( curl -fsSL https://github.com/eza-community/eza/releases/latest/download/eza_x86_64-unknown-linux-gnu.tar.gz \
+( $CURL https://github.com/eza-community/eza/releases/latest/download/eza_x86_64-unknown-linux-gnu.tar.gz \
     | tar xz -C /usr/local/bin ) 2>/dev/null && echo "eza ok" || echo "eza skipped"
-sops_url=$(curl -fsSL https://api.github.com/repos/getsops/sops/releases/latest \
+sops_url=$($CURL https://api.github.com/repos/getsops/sops/releases/latest \
     | grep -oE 'https://[^"]*linux\.amd64' | head -1)
-if [ -n "$sops_url" ] && curl -fsSL "$sops_url" -o /usr/local/bin/sops; then
+if [ -n "$sops_url" ] && $CURL "$sops_url" -o /usr/local/bin/sops; then
     chmod +x /usr/local/bin/sops; echo "sops ok"
 else
     echo "sops skipped"

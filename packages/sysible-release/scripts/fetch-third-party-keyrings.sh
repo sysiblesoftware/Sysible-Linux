@@ -11,7 +11,8 @@ mkdir -p "$KR"
 
 fetch() {  # fetch <url> <dest.gpg>
     printf 'sysible-release: fetching %s\n' "$2"
-    curl -fsSL "$1" | gpg --dearmor > "$KR/$2"
+    curl -fsSL --connect-timeout 20 --max-time 120 --retry 3 --retry-delay 3 \
+        "$1" | gpg --dearmor > "$KR/$2"
     chmod 0644 "$KR/$2"
 }
 
