@@ -96,7 +96,8 @@ $SUDO lb build
 # without downloading the ISO. Look for our title + splash in the assembled tree.
 echo "===== POST-BUILD boot-branding verification ====="
 for f in $(find binary -maxdepth 4 -name 'menu.cfg' -o -maxdepth 4 -name 'grub.cfg' 2>/dev/null); do
-    echo "----- $f -----"; grep -iE 'menu title|Sysible|Debian GNU' "$f" 2>/dev/null | head
+    echo "----- $f -----"
+    grep -iE 'menu title|menuentry|background_image|set (menu_)?color|Sysible|Debian' "$f" 2>/dev/null | head -20
 done
 echo "----- splash images in built tree -----"
 find binary -maxdepth 4 -name 'splash.*' -exec ls -la {} \; 2>/dev/null
