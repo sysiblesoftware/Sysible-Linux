@@ -15,3 +15,17 @@ printf 'Sysible Linux \\n \\l\n\n' > /etc/issue
 echo "Sysible Linux" > /etc/issue.net
 for svc in gdm3 ssh libvirtd docker; do systemctl enable "$svc" 2>/dev/null || true; done
 for grp in sudo kvm libvirt docker wireshark; do groupadd -f "$grp" 2>/dev/null || true; done
+
+# Drop Debian's default wallpapers — Sysible ships its own set (sysible-artwork)
+# and sets Mesh-dark as the default via gschema. Remove the Debian-branded images
+# and their background-chooser registration so only Sysible wallpapers appear.
+rm -f  /usr/share/gnome-background-properties/desktop-base.xml
+rm -rf /usr/share/images/desktop-base
+rm -rf /usr/share/desktop-base/*-theme/wallpaper
+rm -f  /usr/share/backgrounds/*.jpg /usr/share/backgrounds/*.png 2>/dev/null || true
+
+# Replace the stock "Install Debian" launcher with Sysible's own (shipped via
+# includes.chroot as install-sysible-linux.desktop). Leave ours untouched.
+rm -f /usr/share/applications/calamares.desktop \
+      /usr/share/applications/calamares-debian.desktop \
+      /usr/share/applications/install-debian.desktop

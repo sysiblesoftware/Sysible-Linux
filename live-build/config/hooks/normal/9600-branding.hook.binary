@@ -1,0 +1,36 @@
+#!/bin/sh
+# Rebrand the bootloader menus from live-build's stock "Debian GNU/Linux" text to
+# Sysible Linux — across GRUB (UEFI, incl. arm64) and isolinux (BIOS, amd64).
+# This runs as a *binary* hook against the assembled binary/ tree (before the ISO
+# is packed), so it is robust to whichever live-build version CI ships.
+set -e
+
+# --- GRUB (UEFI + arm64) ---------------------------------------------------
+if [ -f binary/boot/grub/grub.cfg ]; then
+    sed -i \
+        -e 's|Debian GNU/Linux - live (fail-safe mode)|Sysible Linux (Live, safe graphics)|g' \
+        -e 's|Debian GNU/Linux - live|Sysible Linux (Live)|g' \
+        -e 's|Debian GNU/Linux|Sysible Linux|g' \
+        binary/boot/grub/grub.cfg
+fi
+
+# --- isolinux (BIOS / amd64) ----------------------------------------------
+for f in binary/isolinux/menu.cfg binary/isolinux/live.cfg \
+         binary/isolinux/install.cfg binary/isolinux/stdmenu.cfg; do
+    [ -f "$f" ] || continue
+    sed -i \
+        -e 's|^menu title .*|menu title Sysible Linux|' \
+        -e 's|Live system (\(.*\) fail-safe mode)|Sysible Linux (Live, safe graphics) [\1]|g' \
+        -e 's|Live system (\(.*\))|Sysible Linux (Live) [\1]|g' \
+        -e 's|\^Live (\(.*\) failsafe)|Sysible Linux (Live, safe graphics) [\1]|g' \
+        -e 's|\^Live (\(.*\))|Sysible Linux (Live) [\1]|g' \
+        -e 's|Debian GNU/Linux|Sysible Linux|g' \
+        "$f"
+done
+
+# --- isolinux splash image -------------------------------------------------
+if [ -f config/branding/splash.png ] && [ -d binary/isolinux ]; then
+    cp config/branding/splash.png binary/isolinux/splash.png
+fi
+
+echo "== Sysible: bootloader menus rebranded =="

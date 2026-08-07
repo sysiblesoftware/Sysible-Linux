@@ -6,3 +6,7 @@ live-config
 live-config-systemd
 calamares
 calamares-settings-debian
+# Guest integration for VMware/VirtualBox/KVM (clipboard, auto-resize, folder
+# sharing) — Sysible Linux commonly runs in a VM, incl. Fusion on Apple Silicon.
+open-vm-tools
+open-vm-tools-desktop
