@@ -19,7 +19,7 @@ echo "Building for architecture: $ARCH"
 # --- host tooling + trust store -------------------------------------------
 $SUDO apt-get update -qq || true
 $SUDO apt-get install -y --no-install-recommends \
-    live-build ca-certificates curl gnupg sudo openssl || true
+    live-build ca-certificates curl gnupg sudo openssl xorriso || true
 $SUDO update-ca-certificates || true
 if ls config/extra-ca/*.crt >/dev/null 2>&1; then
     $SUDO cp config/extra-ca/*.crt /usr/local/share/ca-certificates/ || true
@@ -97,8 +97,12 @@ $SUDO lb build
 # which rewrites data files while KEEPING the El Torito + isohybrid/GPT boot
 # structures (-boot_image any keep). Rebrand the entry titles and add a Sysible
 # background. The release checksums are computed after this, so they match.
-ISO=$(ls live-image-*.hybrid.iso 2>/dev/null | head -1)
-if [ -n "$ISO" ] && command -v xorriso >/dev/null 2>&1; then
+echo "GRUB-DEBUG: pwd=$(pwd)"
+echo "GRUB-DEBUG: isos here: $(ls -1 ./*.iso 2>/dev/null | tr '\n' ' ')"
+echo "GRUB-DEBUG: xorriso=$(command -v xorriso 2>/dev/null || echo NONE)"
+ISO=$(find . -maxdepth 1 -name '*.hybrid.iso' 2>/dev/null | head -1)
+echo "GRUB-DEBUG: selected ISO=[$ISO]"
+if [ -n "$ISO" ]; then
     echo "===== branding GRUB + adding installer entry in $ISO ====="
     WORK=$(mktemp -d)
     $SUDO xorriso -osirrox on -indev "$ISO" -extract /boot/grub/grub.cfg "$WORK/grub.cfg" 2>/dev/null || true
