@@ -91,6 +91,56 @@ lb clean --purge || true
 lb config
 $SUDO lb build
 
+# --- brand GRUB (UEFI, incl. arm64) in the finished ISO --------------------
+# Unlike isolinux, GRUB's grub.cfg is generated during binary_iso and is not
+# override-able via config here, so edit it in the finished ISO with xorriso,
+# which rewrites data files while KEEPING the El Torito + isohybrid/GPT boot
+# structures (-boot_image any keep). Rebrand the entry titles and add a Sysible
+# background. The release checksums are computed after this, so they match.
+ISO=$(ls live-image-*.hybrid.iso 2>/dev/null | head -1)
+if [ -n "$ISO" ] && command -v xorriso >/dev/null 2>&1; then
+    echo "===== branding GRUB + adding installer entry in $ISO ====="
+    WORK=$(mktemp -d)
+    $SUDO xorriso -osirrox on -indev "$ISO" -extract /boot/grub/grub.cfg "$WORK/grub.cfg" 2>/dev/null || true
+    if [ -s "$WORK/grub.cfg" ]; then
+        echo "-- grub.cfg BEFORE --"; grep -iE 'menuentry|background_image|Live system|Debian' "$WORK/grub.cfg" | head
+        cp config/branding/splash.png "$WORK/sysible-splash.png"
+        # Rebrand titles, add a Sysible background, and clone the live entry into
+        # an "Install Sysible Linux" entry (adds sysible.install to the cmdline,
+        # which the live session's autostart uses to launch Calamares).
+        python3 - "$WORK/grub.cfg" <<'PY'
+import sys, re
+p = sys.argv[1]; s = open(p).read()
+s = re.sub(r'Live system \((.*?) fail-safe mode\)', r'Sysible Linux (Live, safe graphics) [\1]', s)
+s = re.sub(r'Live system \((.*?)\)', r'Sysible Linux (Live) [\1]', s)
+s = s.replace('Debian GNU/Linux', 'Sysible Linux')
+m = re.search(r'menuentry\s+"[^"]*Live[^"]*"\s*\{.*?\n\}', s, re.S)
+if m:
+    inst = re.sub(r'menuentry\s+"[^"]*"', 'menuentry "Install Sysible Linux"', m.group(0), count=1)
+    inst = re.sub(r'(\n\s*linux\s+\S+[^\n]*)', r'\1 sysible.install', inst, count=1)
+    s = s + "\n" + inst + "\n"
+hdr = ('insmod png\nif background_image /boot/grub/sysible-splash.png; then true; fi\n'
+       'set color_normal=light-gray/black\nset menu_color_normal=cyan/black\n'
+       'set menu_color_highlight=white/blue\n')
+open(p, 'w').write(hdr + s)
+PY
+        $SUDO xorriso -boot_image any keep -dev "$ISO" \
+            -map "$WORK/grub.cfg" /boot/grub/grub.cfg \
+            -map "$WORK/sysible-splash.png" /boot/grub/sysible-splash.png \
+            -commit 2>&1 | tail -4
+        echo "-- grub.cfg AFTER (re-extracted from ISO) --"
+        $SUDO xorriso -osirrox on -indev "$ISO" -extract /boot/grub/grub.cfg "$WORK/after.cfg" 2>/dev/null
+        grep -iE 'menuentry|background_image|Sysible|Live system' "$WORK/after.cfg" | head -20
+        echo "-- boot structures still present? --"
+        $SUDO xorriso -indev "$ISO" -report_el_torito plain 2>&1 | grep -iE 'El Torito|Boot|Platform|catalog' | head
+        $SUDO xorriso -indev "$ISO" -report_system_area plain 2>&1 | grep -iE 'ISO|MBR|GPT|isohybrid|System area type' | head
+    else
+        echo "!! could not extract /boot/grub/grub.cfg from $ISO"
+    fi
+    rm -rf "$WORK"
+    echo "===== end GRUB branding ====="
+fi
+
 # --- verify boot branding landed in the built tree -------------------------
 # binary/ persists after lb build, so we can prove the overrides were consumed
 # without downloading the ISO. Look for our title + splash in the assembled tree.
