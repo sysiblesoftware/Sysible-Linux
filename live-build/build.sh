@@ -17,7 +17,7 @@ $SUDO apt-get install -y --no-install-recommends live-build ca-certificates curl
 $SUDO update-ca-certificates || true
 
 mkdir -p config/archives
-CODENAME=bookworm
+CODENAME="${SYSIBLE_CODENAME:-bookworm}"; export SYSIBLE_CODENAME="$CODENAME"
 KEYS="https://download.docker.com/linux/debian/gpg docker
 https://pkgs.k8s.io/core:/stable:/v1.31/deb/Release.key kubernetes
 https://baltocdn.com/helm/signing.asc helm

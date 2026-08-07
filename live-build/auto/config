@@ -2,7 +2,7 @@
 # live-build configuration for the Sysible Linux ISO.
 set -e
 lb config noauto \
-  --distribution bookworm \
+  --distribution "${SYSIBLE_CODENAME:-bookworm}" \
   --archive-areas "main contrib non-free non-free-firmware" \
   --architectures amd64 \
   --binary-images iso-hybrid \
