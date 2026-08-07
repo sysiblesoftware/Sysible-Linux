@@ -1,0 +1,12 @@
+# Sysible bits (the metapackage pulls the whole toolkit)
+sysible-release
+sysible-workstation
+# GNOME + login
+gnome-core
+gdm3
+# Live system + graphical installer
+live-boot
+live-config
+live-config-systemd
+calamares
+calamares-settings-debian

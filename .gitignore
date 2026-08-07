@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pybuild/
+
+# Debian build artifacts
+debian/files
+debian/*.substvars
+debian/.debhelper/
+debian/tmp/
+../*.deb
+../*.buildinfo
+../*.changes
+
+# live-build outputs
+live-build/config/archives/
+live-build/.build/
+live-build/cache/
+live-build/chroot/
+live-build/binary/
+live-build/*.iso
+live-build/*.log
+
+# never commit private signing material
+*.private
+*.sec
+secring*

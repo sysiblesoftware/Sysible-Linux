@@ -1,0 +1,73 @@
+Source: sysible-meta
+Section: metapackages
+Priority: optional
+Maintainer: Sysible <maintainers@sysible.io>
+Build-Depends: debhelper-compat (= 13)
+Standards-Version: 4.6.2
+Homepage: https://sysible.io
+Rules-Requires-Root: no
+
+Package: sysible-workstation
+Architecture: all
+Multi-Arch: foreign
+Depends: ${misc:Depends},
+ sysible-release,
+ sysible-cli,
+ systerm,
+ sysible-desktop-gnome,
+# --- system administration ---
+ sudo, openssh-server, openssh-client, curl, wget, git, vim, nano, tmux,
+ screen, tree, less, bash-completion, rsync, lsof, strace, procps, psmisc,
+# --- networking ---
+ net-tools, iproute2, iputils-ping, dnsutils, mtr-tiny, traceroute, tcpdump,
+ nmap, netcat-openbsd, iperf3, ethtool,
+# --- archives ---
+ unzip, zip, bzip2, gzip, xz-utils, p7zip-full,
+# --- troubleshooting ---
+ htop, iotop, sysstat, ncdu, smartmontools, lm-sensors,
+# --- modern CLI ---
+ jq, ripgrep, fd-find, bat, fzf,
+# --- languages / dev base ---
+ python3, python3-pip, python3-venv, pipx, build-essential,
+# --- automation & IaC (from Debian where present; the rest via sysible-release) ---
+ ansible, ansible-lint,
+# --- containers ---
+ podman, buildah, skopeo,
+Recommends:
+# Heavier or GUI pieces — installed by default, removable with --no-install-recommends.
+ gnome-core, calamares,
+# desktop apps
+ wireshark, virt-manager, virt-viewer,
+# languages (bigger toolchains)
+ golang, rustc, cargo, nodejs, npm, default-jdk, maven, gradle,
+# databases
+ postgresql-client, default-mysql-client, sqlite3, redis-tools,
+# security
+ openssl, gnupg, fail2ban, auditd, apparmor, lynis,
+# btop/atop/iftop live in contrib/backports on some suites — Recommends keeps them soft
+ btop, atop, iftop,
+# eza is Debian 13+; soft-depend so a bookworm build doesn't fail
+ eza,
+# These come from third-party repos wired up by sysible-release; Recommends so a
+# missing upstream repo never blocks the whole install:
+ docker-ce, docker-compose-plugin, containerd.io,
+ kubectl, helm, k9s,
+ terraform, opentofu, packer,
+ awscli, sops, age,
+ code,
+Suggests:
+ azure-cli, google-cloud-cli,
+ sysible-controller, sysible-agent,
+Description: Sysible Linux — engineering workstation (all-in-one)
+ Turns a Debian base into the Sysible Linux engineering workstation: the tools a
+ Linux/DevOps/SRE/platform engineer reaches for, installed and ready on first boot,
+ so there is no half-hour of apt after every fresh install.
+ .
+ Depends carries the must-haves (shell, networking, containers via podman, the
+ modern CLI set, Python, Ansible, the Sysible CLI and SysTerm terminal). Recommends
+ carries the heavier and GUI pieces (GNOME, VS Code, Docker CE, Kubernetes, Terraform,
+ cloud CLIs, virtualization) so a lean build can drop them with --no-install-recommends.
+ .
+ Tools that are not in Debian (Docker CE, kubectl/helm, Terraform/OpenTofu, cloud
+ CLIs, VS Code) are pulled from their upstream apt repositories, which sysible-release
+ configures — so `apt install` Just Works without vendoring their binaries.

@@ -1,0 +1,17 @@
+#!/bin/sh
+set -e
+# os-release / issue branding. ID_LIKE=debian keeps third-party scripts happy.
+cat > /etc/os-release <<OSREL
+PRETTY_NAME="Sysible Linux"
+NAME="Sysible Linux"
+ID=sysible
+ID_LIKE=debian
+VERSION="0.1 (Ignition)"
+VERSION_ID="0.1"
+VERSION_CODENAME=ignition
+HOME_URL="https://sysible.io"
+OSREL
+printf 'Sysible Linux \\n \\l\n\n' > /etc/issue
+echo "Sysible Linux" > /etc/issue.net
+for svc in gdm3 ssh libvirtd docker; do systemctl enable "$svc" 2>/dev/null || true; done
+for grp in sudo kvm libvirt docker wireshark; do groupadd -f "$grp" 2>/dev/null || true; done
