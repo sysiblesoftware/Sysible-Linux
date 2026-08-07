@@ -8,5 +8,5 @@ Enabled: no
 URIs: https://repo.sysible.io/apt
 Suites: sysible-stable
 Components: main
-Architectures: amd64
+Architectures: amd64 arm64
 Signed-By: /usr/share/keyrings/sysible-archive-keyring.gpg

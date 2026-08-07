@@ -10,6 +10,17 @@ echo "== Sysible: installing vendor tools =="
 # fails fast (and retries) instead of hanging the whole ISO build indefinitely.
 CURL="curl -fsSL --connect-timeout 20 --max-time 600 --retry 3 --retry-delay 3"
 
+# Architecture-aware naming for the direct-download tools. dpkg's arch name
+# (amd64/arm64) is what helm, opentofu, k9s and sops use; eza uses the GNU
+# machine name (x86_64/aarch64).
+ARCH=$(dpkg --print-architecture)          # amd64 | arm64
+case "$ARCH" in
+    amd64) GNU_ARCH=x86_64 ;;
+    arm64) GNU_ARCH=aarch64 ;;
+    *) echo "Unsupported arch: $ARCH" >&2; exit 1 ;;
+esac
+echo "-- building for $ARCH ($GNU_ARCH) --"
+
 # The live-build chroot can come up with an unpopulated CA trust store — every
 # HTTPS then fails with "unable to get local issuer certificate", which kills the
 # key fetch AND the vendor apt repos. Rebuild it from the shipped roots (and any
@@ -50,9 +61,9 @@ echo "== helm (official binary) =="
 helm_ver=$($CURL https://api.github.com/repos/helm/helm/releases/latest \
     | grep -oE '"tag_name": *"v[0-9.]+"' | grep -oE 'v[0-9.]+' | head -1)
 [ -n "$helm_ver" ] || helm_ver=v3.16.3
-$CURL "https://get.helm.sh/helm-${helm_ver}-linux-amd64.tar.gz" \
-    | tar xz -C /tmp linux-amd64/helm
-install -m0755 /tmp/linux-amd64/helm /usr/local/bin/helm
+$CURL "https://get.helm.sh/helm-${helm_ver}-linux-${ARCH}.tar.gz" \
+    | tar xz -C /tmp "linux-${ARCH}/helm"
+install -m0755 "/tmp/linux-${ARCH}/helm" /usr/local/bin/helm
 helm version --short || true
 
 # opentofu: official GitHub-release binary. Required.
@@ -60,7 +71,7 @@ echo "== opentofu (official binary) =="
 tofu_ver=$($CURL https://api.github.com/repos/opentofu/opentofu/releases/latest \
     | grep -oE '"tag_name": *"v[0-9.]+"' | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
 [ -n "$tofu_ver" ] || tofu_ver=1.8.5
-$CURL "https://github.com/opentofu/opentofu/releases/download/v${tofu_ver}/tofu_${tofu_ver}_linux_amd64.tar.gz" \
+$CURL "https://github.com/opentofu/opentofu/releases/download/v${tofu_ver}/tofu_${tofu_ver}_linux_${ARCH}.tar.gz" \
     | tar xz -C /usr/local/bin tofu
 chmod 0755 /usr/local/bin/tofu
 tofu version || true
@@ -68,12 +79,12 @@ tofu version || true
 # GitHub-release binaries (no apt repo): k9s, eza, sops. Best-effort — a hiccup
 # fetching one must not fail the whole ISO.
 echo "== GitHub-release binaries =="
-( $CURL https://github.com/derailed/k9s/releases/latest/download/k9s_Linux_amd64.tar.gz \
+( $CURL "https://github.com/derailed/k9s/releases/latest/download/k9s_Linux_${ARCH}.tar.gz" \
     | tar xz -C /usr/local/bin k9s ) 2>/dev/null && echo "k9s ok" || echo "k9s skipped"
-( $CURL https://github.com/eza-community/eza/releases/latest/download/eza_x86_64-unknown-linux-gnu.tar.gz \
+( $CURL "https://github.com/eza-community/eza/releases/latest/download/eza_${GNU_ARCH}-unknown-linux-gnu.tar.gz" \
     | tar xz -C /usr/local/bin ) 2>/dev/null && echo "eza ok" || echo "eza skipped"
 sops_url=$($CURL https://api.github.com/repos/getsops/sops/releases/latest \
-    | grep -oE 'https://[^"]*linux\.amd64' | head -1)
+    | grep -oE "https://[^\"]*linux\.${ARCH}" | head -1)
 if [ -n "$sops_url" ] && $CURL "$sops_url" -o /usr/local/bin/sops; then
     chmod +x /usr/local/bin/sops; echo "sops ok"
 else

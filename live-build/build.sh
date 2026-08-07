@@ -13,6 +13,8 @@ cd "$(dirname "$0")"
 ROOT=$(cd .. && pwd)
 if [ "$(id -u)" = 0 ]; then SUDO=; else SUDO="sudo"; fi
 CODENAME="${SYSIBLE_CODENAME:-bookworm}"; export SYSIBLE_CODENAME="$CODENAME"
+ARCH="${SYSIBLE_ARCH:-amd64}"; export SYSIBLE_ARCH="$ARCH"
+echo "Building for architecture: $ARCH"
 
 # --- host tooling + trust store -------------------------------------------
 $SUDO apt-get update -qq || true

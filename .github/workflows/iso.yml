@@ -7,6 +7,11 @@ name: ISO
 on:
   workflow_dispatch:          # run it manually from the Actions tab
     inputs:
+      arch:
+        description: 'Target architecture'
+        type: choice
+        options: [amd64, arm64]
+        default: amd64
       release:
         description: 'Publish a GitHub Release (split ISO + checksums)'
         type: boolean
@@ -16,18 +21,22 @@ on:
         type: string
         default: v0.1.0
   push:
-    tags: ['v*']              # and on release tags
+    tags: ['v*']              # and on release tags (amd64)
 
 permissions:
   contents: write             # needed to create the Release on a tag
 
 jobs:
   iso:
-    runs-on: ubuntu-latest
+    # arm64 builds run on a native ARM runner (free for public repos); amd64 and
+    # tag pushes use the standard x86 runner.
+    runs-on: ${{ (github.event.inputs.arch == 'arm64') && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     timeout-minutes: 120
     container:
       image: debian:bookworm
       options: --privileged   # live-build needs mount/loop/chroot
+    env:
+      SYSIBLE_ARCH: ${{ github.event.inputs.arch || 'amd64' }}
     steps:
       - name: Prereqs for checkout
         run: |
@@ -47,7 +56,7 @@ jobs:
       - name: Upload ISO (artifact)
         uses: actions/upload-artifact@v4
         with:
-          name: sysible-linux-amd64-iso
+          name: sysible-linux-${{ env.SYSIBLE_ARCH }}-iso
           path: live-build/*.iso
           if-no-files-found: error
           compression-level: 0
@@ -58,29 +67,30 @@ jobs:
         run: |
           set -e
           apt-get install -y --no-install-recommends coreutils
+          A="${SYSIBLE_ARCH:-amd64}"     # arch-suffix shared-name files
           mkdir -p release
           ISO=$(ls live-build/*.iso | head -1)
           BASE=$(basename "$ISO")
           cd release
           # Full-image checksum, for verifying AFTER reassembly.
-          sha256sum -b "../$ISO" | sed "s| .*| *$BASE|" > SHA256SUMS
+          sha256sum -b "../$ISO" | sed "s| .*| *$BASE|" > "SHA256SUMS.$A"
           # GitHub release assets cap at 2 GiB, so split into 1900 MiB parts.
           split -b 1900M -d --additional-suffix=.part "../$ISO" "$BASE."
           # Per-part checksums, for verifying the downloads BEFORE reassembly.
-          sha256sum -b "$BASE".*.part > SHA256SUMS.parts
-          cat > REASSEMBLE.md <<EOF
-          # Sysible Linux — reassemble the ISO
+          sha256sum -b "$BASE".*.part > "SHA256SUMS.$A.parts"
+          cat > "REASSEMBLE.$A.md" <<EOF
+          # Sysible Linux ($A) — reassemble the ISO
 
           The ISO is ~3.4 GB, over GitHub's 2 GB per-file release limit, so it is
           split into \`$BASE.*.part\` pieces.
 
-          Download every \`$BASE.*.part\`, plus \`SHA256SUMS\` and
-          \`SHA256SUMS.parts\`, into one folder, then:
+          Download every \`$BASE.*.part\`, plus \`SHA256SUMS.$A\` and
+          \`SHA256SUMS.$A.parts\`, into one folder, then:
 
           \`\`\`sh
-          sha256sum -c SHA256SUMS.parts     # verify the downloaded parts
-          cat $BASE.*.part > $BASE          # reassemble
-          sha256sum -c SHA256SUMS           # verify the whole ISO
+          sha256sum -c SHA256SUMS.$A.parts     # verify the downloaded parts
+          cat $BASE.*.part > $BASE             # reassemble
+          sha256sum -c SHA256SUMS.$A           # verify the whole ISO
           \`\`\`
 
           Then write \`$BASE\` to a USB stick (\`dd\`, Etcher, Rufus) and boot it.
@@ -98,8 +108,7 @@ jobs:
           name: Sysible Linux ${{ github.ref_type == 'tag' && github.ref_name || inputs.tag }}
           files: |
             release/*.part
-            release/SHA256SUMS
-            release/SHA256SUMS.parts
-            release/REASSEMBLE.md
+            release/SHA256SUMS.*
+            release/REASSEMBLE.*.md
           generate_release_notes: true
           fail_on_unmatched_files: true
