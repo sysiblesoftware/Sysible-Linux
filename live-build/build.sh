@@ -36,15 +36,16 @@ echo "Included $(ls config/packages.chroot/*.deb 2>/dev/null | wc -l) Sysible pa
 # --- upstream vendor repos: add only the ones we can actually reach ---------
 mkdir -p config/archives
 : > config/archives/vendors.list.chroot
+SKIPPED=""
 try_repo() {  # try_repo "<deb line>" <key-url> <name>
     if curl -fsSL "$2" > "config/archives/${3}.key.chroot" 2>/dev/null \
        && [ -s "config/archives/${3}.key.chroot" ]; then
         echo "$1" >> config/archives/vendors.list.chroot; echo "  + $3"
     else
-        rm -f "config/archives/${3}.key.chroot"; echo "  - $3 (unreachable — deferred)"
+        rm -f "config/archives/${3}.key.chroot"; SKIPPED="$SKIPPED $3"; echo "  - $3 (UNREACHABLE)"
     fi
 }
-echo "== upstream vendor repos (best-effort) =="
+echo "== upstream vendor repos =="
 try_repo "deb https://download.docker.com/linux/debian ${CODENAME} stable"   https://download.docker.com/linux/debian/gpg            docker
 try_repo "deb https://pkgs.k8s.io/core:/stable:/v1.31/deb/ /"                https://pkgs.k8s.io/core:/stable:/v1.31/deb/Release.key kubernetes
 try_repo "deb https://baltocdn.com/helm/stable/debian/ all main"             https://baltocdn.com/helm/signing.asc                  helm
@@ -62,6 +63,40 @@ if curl -fsI "https://repo.sysible.io/apt/dists/sysible-stable/Release" >/dev/nu
 else
     rm -f config/archives/sysible.list.chroot config/archives/sysible.key.chroot
     echo "  - sysible repo (not published yet — using the included packages)"
+fi
+
+# --- expand the metapackage into the FULL toolkit so EVERYTHING is baked in --
+# Single source of truth: every package in sysible-workstation's Depends +
+# Recommends + Suggests (minus the sysible-* ones, included directly above, and
+# systerm, built from its own repo) becomes an explicit ISO package. Nothing is
+# left to install after first boot — that is the whole point of the distro.
+awk '
+    /^Description:/ { f=0 }
+    /^(Depends|Recommends|Suggests):/ { f=1 }
+    f {
+        line=$0; sub(/^(Depends|Recommends|Suggests):/,"",line)
+        if (line ~ /^[[:space:]]*#/) next
+        n=split(line, a, ",")
+        for (i=1;i<=n;i++) {
+            gsub(/^[[:space:]]+|[[:space:]]+$/,"",a[i])
+            split(a[i], b, /[[:space:]]/); name=b[1]
+            if (name ~ /^[a-z0-9][a-z0-9.+-]+$/ && name !~ /^sysible-/ && name != "systerm")
+                print name
+        }
+    }
+' "$ROOT/packages/sysible-meta/debian/control" | sort -u \
+    > config/package-lists/sysible-toolkit.list.chroot
+echo "Toolkit baked in: $(grep -c . config/package-lists/sysible-toolkit.list.chroot) packages."
+
+if [ -n "$SKIPPED" ]; then
+    echo
+    echo "!! Vendor repos UNREACHABLE on this network:$SKIPPED"
+    echo "!! Those tools are in the toolkit, so 'lb build' WILL fail here — a full"
+    echo "!! Sysible ISO can't be built on a network that blocks the tool sources."
+    echo "!! Build on the GitHub Actions 'ISO' workflow (clean network, produces the"
+    echo "!! complete ISO), on a non-inspected link, or add your proxy CA to"
+    echo "!! config/extra-ca/ (see its README). Not skipping tools — that would defeat"
+    echo "!! the point of the distro."
 fi
 
 # --- assemble -------------------------------------------------------------

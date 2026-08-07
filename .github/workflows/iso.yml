@@ -1,0 +1,40 @@
+name: ISO
+
+# Build the COMPLETE Sysible Linux ISO on GitHub's runners, whose network is not
+# HTTPS-inspected, so every vendor tool (Docker, Kubernetes, Terraform, cloud
+# CLIs, VS Code) bakes in. Download the finished .iso from the run's Artifacts.
+on:
+  workflow_dispatch:          # run it manually from the Actions tab
+  push:
+    tags: ['v*']              # and on release tags
+
+jobs:
+  iso:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    container:
+      image: debian:bookworm
+      options: --privileged   # live-build needs mount/loop/chroot
+    steps:
+      - name: Prereqs for checkout
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends git ca-certificates
+
+      - uses: actions/checkout@v4
+
+      - name: Build the ISO
+        run: |
+          cd live-build
+          ./build.sh
+
+      - name: Show result
+        run: ls -lh live-build/*.iso
+
+      - name: Upload ISO
+        uses: actions/upload-artifact@v4
+        with:
+          name: sysible-linux-amd64-iso
+          path: live-build/*.iso
+          if-no-files-found: error
+          compression-level: 0
