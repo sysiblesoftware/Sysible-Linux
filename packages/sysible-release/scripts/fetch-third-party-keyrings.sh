@@ -17,7 +17,6 @@ fetch() {  # fetch <url> <dest.gpg>
 
 fetch https://download.docker.com/linux/debian/gpg                      docker.gpg
 fetch https://pkgs.k8s.io/core:/stable:/v1.31/deb/Release.key           kubernetes.gpg
-fetch https://baltocdn.com/helm/signing.asc                             helm.gpg
 fetch https://apt.releases.hashicorp.com/gpg                            hashicorp.gpg
 fetch https://get.opentofu.org/opentofu.gpg                             opentofu.gpg
 fetch https://packages.microsoft.com/keys/microsoft.asc                 microsoft.gpg

@@ -2,7 +2,6 @@ keyrings/sysible-archive-keyring.gpg   usr/share/keyrings
 apt/sources.list.d/sysible.sources     etc/apt/sources.list.d
 apt/sources.list.d/docker.sources      etc/apt/sources.list.d
 apt/sources.list.d/kubernetes.sources  etc/apt/sources.list.d
-apt/sources.list.d/helm.sources        etc/apt/sources.list.d
 apt/sources.list.d/hashicorp.sources   etc/apt/sources.list.d
 apt/sources.list.d/opentofu.sources    etc/apt/sources.list.d
 apt/sources.list.d/microsoft-vscode.sources etc/apt/sources.list.d
