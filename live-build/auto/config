@@ -7,7 +7,7 @@ lb config noauto \
   --architectures amd64 \
   --binary-images iso-hybrid \
   --debian-installer none \
-  --bootappend-live "boot=live components username=sysible" \
+  --bootappend-live "boot=live components username=sysible user-fullname=Sysible user-default-groups=sudo,kvm,libvirt,docker,wireshark,plugdev,netdev,video,audio" \
   --iso-application "Sysible Linux" \
   --iso-publisher "Sysible" \
   --iso-volume "Sysible Linux" \
