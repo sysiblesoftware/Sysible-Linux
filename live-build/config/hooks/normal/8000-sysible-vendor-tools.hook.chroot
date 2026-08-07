@@ -32,11 +32,13 @@ fi
 apt-get update
 
 # apt-installable vendor tools (docker-ce pulls cli/containerd as deps).
-# (helm is NOT here: baltocdn.com serves an incomplete TLS chain a fresh chroot
-# can't verify — it is installed from its official binary below instead.)
+# helm and tofu are NOT here — their apt repos misbehave in a fresh chroot
+# (baltocdn.com serves an incomplete TLS chain; packages.opentofu.org needs a
+# second Cloudsmith signing key) — so both are installed from official binaries
+# below instead.
 apt-get install -y --no-install-recommends \
     docker-ce docker-compose-plugin docker-buildx-plugin \
-    kubectl terraform packer tofu \
+    kubectl terraform packer \
     google-cloud-cli azure-cli code
 
 # helm: official binary (get.helm.sh is Google-hosted, complete chain). Required.
@@ -48,6 +50,16 @@ curl -fsSL "https://get.helm.sh/helm-${helm_ver}-linux-amd64.tar.gz" \
     | tar xz -C /tmp linux-amd64/helm
 install -m0755 /tmp/linux-amd64/helm /usr/local/bin/helm
 helm version --short || true
+
+# opentofu: official GitHub-release binary. Required.
+echo "== opentofu (official binary) =="
+tofu_ver=$(curl -fsSL https://api.github.com/repos/opentofu/opentofu/releases/latest \
+    | grep -oE '"tag_name": *"v[0-9.]+"' | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+[ -n "$tofu_ver" ] || tofu_ver=1.8.5
+curl -fsSL "https://github.com/opentofu/opentofu/releases/download/v${tofu_ver}/tofu_${tofu_ver}_linux_amd64.tar.gz" \
+    | tar xz -C /usr/local/bin tofu
+chmod 0755 /usr/local/bin/tofu
+tofu version || true
 
 # GitHub-release binaries (no apt repo): k9s, eza, sops. Best-effort — a hiccup
 # fetching one must not fail the whole ISO.
