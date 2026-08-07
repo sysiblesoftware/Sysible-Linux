@@ -22,6 +22,10 @@ $SUDO update-ca-certificates || true
 if ls config/extra-ca/*.crt >/dev/null 2>&1; then
     $SUDO cp config/extra-ca/*.crt /usr/local/share/ca-certificates/ || true
     $SUDO update-ca-certificates || true
+    # Also trust it INSIDE the chroot so the vendor hook's HTTPS verifies on an
+    # inspected network (includes.chroot is copied in before hooks run).
+    mkdir -p config/includes.chroot/usr/local/share/ca-certificates
+    cp config/extra-ca/*.crt config/includes.chroot/usr/local/share/ca-certificates/ || true
 fi
 
 # --- build the Sysible packages and include them directly ------------------

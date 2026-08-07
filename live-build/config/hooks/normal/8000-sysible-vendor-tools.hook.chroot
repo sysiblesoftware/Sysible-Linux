@@ -6,6 +6,24 @@ set -e
 export DEBIAN_FRONTEND=noninteractive
 echo "== Sysible: installing vendor tools =="
 
+# The live-build chroot can come up with an unpopulated CA trust store — every
+# HTTPS then fails with "unable to get local issuer certificate", which kills the
+# key fetch AND the vendor apt repos. Rebuild it from the shipped roots (and any
+# operator CA dropped into the chroot for inspected networks) before any HTTPS.
+echo "-- rebuilding chroot CA trust store --"
+apt-get install -y --reinstall ca-certificates >/dev/null 2>&1 \
+    || apt-get install -y ca-certificates >/dev/null 2>&1 || true
+update-ca-certificates --fresh >/dev/null 2>&1 || update-ca-certificates || true
+certs=$(grep -c 'BEGIN CERTIFICATE' /etc/ssl/certs/ca-certificates.crt 2>/dev/null || echo 0)
+echo "   trusted roots: $certs"
+if ! curl -fsS -o /dev/null https://download.docker.com/linux/debian/gpg; then
+    echo "FATAL: HTTPS still fails to verify inside the chroot after rebuilding the"
+    echo "       CA store. The build network is intercepting TLS with a private CA."
+    echo "       Build on a clean network (the GitHub Actions runner) or drop the"
+    echo "       intercepting CA into live-build/config/extra-ca/ so it is trusted."
+    exit 1
+fi
+
 # Fetch the vendor signing keys into /usr/share/keyrings (matches the .sources
 # that sysible-release installed). Ships with sysible-release.
 if [ -x /usr/share/sysible/scripts/fetch-third-party-keyrings.sh ]; then
