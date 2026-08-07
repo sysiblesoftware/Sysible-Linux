@@ -15,6 +15,12 @@ if [ "$(id -u)" = 0 ]; then SUDO=; else SUDO="sudo"; fi
 $SUDO apt-get update -qq || true
 $SUDO apt-get install -y --no-install-recommends live-build ca-certificates curl gnupg || true
 $SUDO update-ca-certificates || true
+# Trust any extra/enterprise CAs (e.g. a TLS-inspecting proxy) dropped in
+# config/extra-ca/. Without this, HTTPS interception breaks the key fetch.
+if ls config/extra-ca/*.crt >/dev/null 2>&1; then
+    $SUDO cp config/extra-ca/*.crt /usr/local/share/ca-certificates/
+    $SUDO update-ca-certificates || true
+fi
 
 mkdir -p config/archives
 CODENAME="${SYSIBLE_CODENAME:-bookworm}"; export SYSIBLE_CODENAME="$CODENAME"
