@@ -6,6 +6,15 @@ name: ISO
 # or — on a version tag (v*) — from the published GitHub Release.
 on:
   workflow_dispatch:          # run it manually from the Actions tab
+    inputs:
+      release:
+        description: 'Publish a GitHub Release (split ISO + checksums)'
+        type: boolean
+        default: false
+      tag:
+        description: 'Release tag to create/use (only when release=true)'
+        type: string
+        default: v0.1.0
   push:
     tags: ['v*']              # and on release tags
 
@@ -43,9 +52,9 @@ jobs:
           if-no-files-found: error
           compression-level: 0
 
-      # ---- release-only steps (tag push) -----------------------------------
+      # ---- release-only steps (tag push, or a dispatch with release=true) --
       - name: Split ISO for release
-        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/') || inputs.release
         run: |
           set -e
           apt-get install -y --no-install-recommends coreutils
@@ -80,9 +89,13 @@ jobs:
           ls -lh
 
       - name: Publish release
-        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/') || inputs.release
         uses: softprops/action-gh-release@v2
         with:
+          # On a tag push, use that tag; on a dispatch, create/use inputs.tag
+          # at the checked-out commit (action creates the tag if it's new).
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || inputs.tag }}
+          name: Sysible Linux ${{ github.ref_type == 'tag' && github.ref_name || inputs.tag }}
           files: |
             release/*.part
             release/SHA256SUMS
