@@ -1,12 +1,13 @@
 #!/bin/sh
 # Build the Sysible Linux ISO. Run on a Debian host, or in a debian:bookworm
-# container, with network access:
-#     sudo ./build.sh
+# container, with network access:  sudo ./build.sh
 #
-# Resilient by design: the Sysible packages are built and included DIRECTLY, so
-# no live apt repo is required yet, and each upstream vendor repo is added only if
-# reachable — a TLS-inspecting proxy that blocks HTTPS just means those tools are
-# deferred, the ISO still builds.
+# Everything is baked in — nothing to install after first boot:
+#   * Debian-native tools come from the package list (below).
+#   * The Sysible packages are built here and included directly.
+#   * The non-Debian vendor tools (Docker, Kubernetes, Terraform, cloud CLIs,
+#     VS Code, k9s/sops/eza) are installed by a chroot hook that controls apt
+#     directly — reliable, unlike live-build's archive-key handling.
 set -e
 cd "$(dirname "$0")"
 ROOT=$(cd .. && pwd)
@@ -18,7 +19,6 @@ $SUDO apt-get update -qq || true
 $SUDO apt-get install -y --no-install-recommends \
     live-build ca-certificates curl gnupg sudo openssl || true
 $SUDO update-ca-certificates || true
-# Trust any enterprise/proxy CAs dropped in config/extra-ca/ (see its README).
 if ls config/extra-ca/*.crt >/dev/null 2>&1; then
     $SUDO cp config/extra-ca/*.crt /usr/local/share/ca-certificates/ || true
     $SUDO update-ca-certificates || true
@@ -33,44 +33,16 @@ mkdir -p config/packages.chroot
 cp "$ROOT"/dist/*.deb config/packages.chroot/ 2>/dev/null || true
 echo "Included $(ls config/packages.chroot/*.deb 2>/dev/null | wc -l) Sysible package(s) directly."
 
-# --- upstream vendor repos: add only the ones we can actually reach ---------
-mkdir -p config/archives
-: > config/archives/vendors.list.chroot
-SKIPPED=""
-try_repo() {  # try_repo "<deb line>" <key-url> <name>
-    if curl -fsSL "$2" > "config/archives/${3}.key.chroot" 2>/dev/null \
-       && [ -s "config/archives/${3}.key.chroot" ]; then
-        echo "$1" >> config/archives/vendors.list.chroot; echo "  + $3"
-    else
-        rm -f "config/archives/${3}.key.chroot"; SKIPPED="$SKIPPED $3"; echo "  - $3 (UNREACHABLE)"
-    fi
-}
-echo "== upstream vendor repos =="
-try_repo "deb https://download.docker.com/linux/debian ${CODENAME} stable"   https://download.docker.com/linux/debian/gpg            docker
-try_repo "deb https://pkgs.k8s.io/core:/stable:/v1.31/deb/ /"                https://pkgs.k8s.io/core:/stable:/v1.31/deb/Release.key kubernetes
-try_repo "deb https://baltocdn.com/helm/stable/debian/ all main"             https://baltocdn.com/helm/signing.asc                  helm
-try_repo "deb https://apt.releases.hashicorp.com ${CODENAME} main"           https://apt.releases.hashicorp.com/gpg                  hashicorp
-try_repo "deb https://packages.opentofu.org/opentofu/tofu/any/ any main"     https://get.opentofu.org/opentofu.gpg                   opentofu
-try_repo "deb https://packages.microsoft.com/repos/code stable main"         https://packages.microsoft.com/keys/microsoft.asc      microsoft
-try_repo "deb https://packages.cloud.google.com/apt cloud-sdk main"          https://packages.cloud.google.com/apt/doc/apt-key.gpg  google-cloud
-
-# --- the Sysible apt repo, only if it's actually published -----------------
-if curl -fsI "https://repo.sysible.io/apt/dists/sysible-stable/Release" >/dev/null 2>&1; then
-    echo "deb https://repo.sysible.io/apt sysible-stable main" > config/archives/sysible.list.chroot
-    curl -fsSL "https://repo.sysible.io/apt/sysible-archive-keyring.asc" \
-        > config/archives/sysible.key.chroot 2>/dev/null || true
-    echo "  + sysible repo"
-else
-    rm -f config/archives/sysible.list.chroot config/archives/sysible.key.chroot
-    echo "  - sysible repo (not published yet — using the included packages)"
-fi
-
-# --- expand the metapackage into the FULL toolkit so EVERYTHING is baked in --
-# Single source of truth: every package in sysible-workstation's Depends +
-# Recommends + Suggests (minus the sysible-* ones, included directly above, and
-# systerm, built from its own repo) becomes an explicit ISO package. Nothing is
-# left to install after first boot — that is the whole point of the distro.
+# --- expand the metapackage into the Debian-native toolkit -----------------
+# Every package in sysible-workstation's Depends/Recommends/Suggests EXCEPT the
+# sysible-* ones (included directly), systerm (its own repo), and the vendor /
+# GitHub-binary tools (installed by the hook, since they aren't in Debian). One
+# source of truth: the metapackage control.
 awk '
+    BEGIN {
+        split("docker-ce docker-compose-plugin containerd.io kubectl helm k9s terraform opentofu packer azure-cli google-cloud-cli code sops eza", v, " ")
+        for (i in v) VEND[v[i]] = 1
+    }
     /^Description:/ { f=0 }
     /^(Depends|Recommends|Suggests):/ { f=1 }
     f {
@@ -80,24 +52,13 @@ awk '
         for (i=1;i<=n;i++) {
             gsub(/^[[:space:]]+|[[:space:]]+$/,"",a[i])
             split(a[i], b, /[[:space:]]/); name=b[1]
-            if (name ~ /^[a-z0-9][a-z0-9.+-]+$/ && name !~ /^sysible-/ && name != "systerm")
+            if (name ~ /^[a-z0-9][a-z0-9.+-]+$/ && name !~ /^sysible-/ && name != "systerm" && !(name in VEND))
                 print name
         }
     }
 ' "$ROOT/packages/sysible-meta/debian/control" | sort -u \
     > config/package-lists/sysible-toolkit.list.chroot
-echo "Toolkit baked in: $(grep -c . config/package-lists/sysible-toolkit.list.chroot) packages."
-
-if [ -n "$SKIPPED" ]; then
-    echo
-    echo "!! Vendor repos UNREACHABLE on this network:$SKIPPED"
-    echo "!! Those tools are in the toolkit, so 'lb build' WILL fail here — a full"
-    echo "!! Sysible ISO can't be built on a network that blocks the tool sources."
-    echo "!! Build on the GitHub Actions 'ISO' workflow (clean network, produces the"
-    echo "!! complete ISO), on a non-inspected link, or add your proxy CA to"
-    echo "!! config/extra-ca/ (see its README). Not skipping tools — that would defeat"
-    echo "!! the point of the distro."
-fi
+echo "Debian toolkit: $(grep -c . config/package-lists/sysible-toolkit.list.chroot) packages (vendor tools via hook)."
 
 # --- assemble -------------------------------------------------------------
 lb clean --purge || true

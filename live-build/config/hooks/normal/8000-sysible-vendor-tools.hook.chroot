@@ -1,0 +1,37 @@
+#!/bin/sh
+# Install the non-Debian tools that make Sysible "everything on first boot":
+# the apt-based vendor tools (via the repos sysible-release configured) and the
+# GitHub-release binaries that have no apt repo. Runs in the chroot with network.
+set -e
+export DEBIAN_FRONTEND=noninteractive
+echo "== Sysible: installing vendor tools =="
+
+# Fetch the vendor signing keys into /usr/share/keyrings (matches the .sources
+# that sysible-release installed). Ships with sysible-release.
+if [ -x /usr/share/sysible/scripts/fetch-third-party-keyrings.sh ]; then
+    /usr/share/sysible/scripts/fetch-third-party-keyrings.sh
+fi
+apt-get update
+
+# apt-installable vendor tools (docker-ce pulls cli/containerd as deps).
+apt-get install -y --no-install-recommends \
+    docker-ce docker-compose-plugin docker-buildx-plugin \
+    kubectl helm terraform packer tofu \
+    google-cloud-cli azure-cli code
+
+# GitHub-release binaries (no apt repo): k9s, eza, sops. Best-effort — a hiccup
+# fetching one must not fail the whole ISO.
+echo "== GitHub-release binaries =="
+( curl -fsSL https://github.com/derailed/k9s/releases/latest/download/k9s_Linux_amd64.tar.gz \
+    | tar xz -C /usr/local/bin k9s ) 2>/dev/null && echo "k9s ok" || echo "k9s skipped"
+( curl -fsSL https://github.com/eza-community/eza/releases/latest/download/eza_x86_64-unknown-linux-gnu.tar.gz \
+    | tar xz -C /usr/local/bin ) 2>/dev/null && echo "eza ok" || echo "eza skipped"
+sops_url=$(curl -fsSL https://api.github.com/repos/getsops/sops/releases/latest \
+    | grep -oE 'https://[^"]*linux\.amd64' | head -1)
+if [ -n "$sops_url" ] && curl -fsSL "$sops_url" -o /usr/local/bin/sops; then
+    chmod +x /usr/local/bin/sops; echo "sops ok"
+else
+    echo "sops skipped"
+fi
+
+echo "== Sysible vendor tools done =="
