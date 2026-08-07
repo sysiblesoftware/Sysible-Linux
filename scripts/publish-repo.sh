@@ -23,6 +23,12 @@ GPGKEY="${SYSIBLE_GPG_KEY:-maintainers@sysible.io}"
 ENDPOINT="${SYSIBLE_APTLY_ENDPOINT:-}"     # "" -> filesystem:; else e.g. s3:sysible:
 PREFIX="${ENDPOINT}"                        # publish prefix (endpoint or empty)
 
+# Ensure a signing key exists in GNUPGHOME (auto-create on first publish).
+if ! gpg --list-secret-keys "$GPGKEY" >/dev/null 2>&1; then
+    echo "No signing key for '$GPGKEY' in GNUPGHOME=${GNUPGHOME:-$HOME/.gnupg}; generating it..."
+    "$ROOT/scripts/gen-signing-key.sh"
+fi
+
 ls "$DIST"/*.deb >/dev/null 2>&1 || { echo "no .deb in $DIST — run build-all.sh first" >&2; exit 1; }
 
 # 1. Repo exists (idempotent), then (re)load the current .deb set.

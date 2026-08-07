@@ -6,6 +6,7 @@
 # named by Signed-By in its .sources file.
 set -e
 KR=/usr/share/keyrings
+command -v update-ca-certificates >/dev/null 2>&1 && update-ca-certificates >/dev/null 2>&1 || true
 mkdir -p "$KR"
 
 fetch() {  # fetch <url> <dest.gpg>

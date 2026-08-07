@@ -14,6 +14,7 @@ cd "$(dirname "$0")"
 if [ "$(id -u)" = 0 ]; then SUDO=; else SUDO="sudo"; fi
 $SUDO apt-get update -qq || true
 $SUDO apt-get install -y --no-install-recommends live-build ca-certificates curl gnupg || true
+$SUDO update-ca-certificates || true
 
 mkdir -p config/archives
 CODENAME=bookworm
