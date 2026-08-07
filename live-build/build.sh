@@ -10,6 +10,11 @@ cd "$(dirname "$0")"
 # install sysible-workstation and everything it recommends. live-build reads repo
 # lists + keys from config/archives/. We generate them here (keys are fetched now,
 # since the build itself may run offline).
+# Ensure TLS + tooling on a minimal Debian host (fixes curl SSL cert errors).
+if [ "$(id -u)" = 0 ]; then SUDO=; else SUDO="sudo"; fi
+$SUDO apt-get update -qq || true
+$SUDO apt-get install -y --no-install-recommends live-build ca-certificates curl gnupg || true
+
 mkdir -p config/archives
 CODENAME=bookworm
 KEYS="https://download.docker.com/linux/debian/gpg docker
