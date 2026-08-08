@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=Sysible
+Description=Sysible Linux boot splash
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/sysible
+ScriptFile=/usr/share/plymouth/themes/sysible/sysible.script

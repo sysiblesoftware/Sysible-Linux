@@ -20,3 +20,7 @@ gnome-text-editor
 # net-tools is already pulled via the metapackage; listed here explicitly so
 # ifconfig is guaranteed present (its PATH is fixed via /etc/profile.d).
 net-tools
+# Graphical boot/shutdown splash — themed as Sysible (the system hook sets our
+# theme as default and rebuilds the initramfs), replacing Debian's Plymouth theme.
+plymouth
+plymouth-themes

@@ -1,0 +1,91 @@
+# Sysible Linux Plymouth splash — dark field, centred hexagon-prompt logo with a
+# gentle breathing pulse and a small dot throbber. Shows password bullets for
+# encrypted-disk unlock. Pure script module, so it needs no label plugin.
+
+# --- dark background (#0d1117 -> slightly darker) ---
+Window.SetBackgroundTopColor(0.051, 0.067, 0.090);
+Window.SetBackgroundBottomColor(0.035, 0.047, 0.067);
+
+sw = Window.GetWidth();
+sh = Window.GetHeight();
+cx = Window.GetX() + sw / 2;
+cy = Window.GetY() + sh / 2;
+
+# --- logo (hexagon + SYSIBLE LINUX wordmark) ---
+logo.image = Image("logo.png");
+logo.sprite = Sprite(logo.image);
+logo.w = logo.image.GetWidth();
+logo.h = logo.image.GetHeight();
+logo.top = cy - logo.h / 2 - 24;
+logo.sprite.SetX(cx - logo.w / 2);
+logo.sprite.SetY(logo.top);
+logo.sprite.SetOpacity(1);
+
+# --- dot throbber below the logo ---
+dot.image = Image("dot.png");
+dot.w = dot.image.GetWidth();
+ndots = 5;
+gap = dot.w * 2;
+dots_y = logo.top + logo.h + 46;
+dots_x0 = cx - ((ndots - 1) * gap) / 2 - dot.w / 2;
+for (i = 0; i < ndots; i++) {
+    dots[i] = Sprite(dot.image);
+    dots[i].SetX(dots_x0 + i * gap);
+    dots[i].SetY(dots_y);
+    dots[i].SetOpacity(0.18);
+}
+
+# --- pre-create hidden password bullets (encrypted-disk unlock) ---
+prompt_active = 0;
+bullet.image = Image("bullet.png");
+bullet.w = bullet.image.GetWidth();
+MAXB = 48;
+for (i = 0; i < MAXB; i++) {
+    pb[i] = Sprite(bullet.image);
+    pb[i].SetOpacity(0);
+}
+
+counter = 0;
+fun refresh() {
+    counter++;
+    if (prompt_active) {
+        logo.sprite.SetOpacity(1);
+        for (i = 0; i < ndots; i++) dots[i].SetOpacity(0);
+        return;
+    }
+    # breathing logo
+    o = 0.78 + 0.22 * Math.Sin(counter / 24);
+    logo.sprite.SetOpacity(o);
+    # travelling highlight across the dots
+    active = Math.Int(counter / 7) % ndots;
+    for (i = 0; i < ndots; i++) {
+        if (i == active) dots[i].SetOpacity(1.0);
+        else dots[i].SetOpacity(0.18);
+    }
+}
+Plymouth.SetRefreshFunction(refresh);
+
+# --- password entry: render bullets centred under the logo ---
+fun on_display_password(prompt, n) {
+    prompt_active = 1;
+    if (n > MAXB) n = MAXB;
+    total = n * (bullet.w + 8) - 8;
+    x0 = cx - total / 2;
+    y = cy + logo.h / 2 + 10;
+    for (i = 0; i < MAXB; i++) {
+        if (i < n) {
+            pb[i].SetX(x0 + i * (bullet.w + 8));
+            pb[i].SetY(y);
+            pb[i].SetOpacity(0.95);
+        } else {
+            pb[i].SetOpacity(0);
+        }
+    }
+}
+Plymouth.SetDisplayPasswordFunction(on_display_password);
+
+fun on_display_normal() {
+    prompt_active = 0;
+    for (i = 0; i < MAXB; i++) pb[i].SetOpacity(0);
+}
+Plymouth.SetDisplayNormalFunction(on_display_normal);

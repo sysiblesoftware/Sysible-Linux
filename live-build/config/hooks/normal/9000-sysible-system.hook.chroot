@@ -46,11 +46,19 @@ rm -rf /usr/share/desktop-base/*-theme/wallpaper
 rm -f  /usr/share/backgrounds/*.jpg /usr/share/backgrounds/*.png 2>/dev/null || true
 rm -rf /usr/share/backgrounds/gnome 2>/dev/null || true
 
-# Replace the stock "Install Debian" launcher with Sysible's own (shipped via
-# includes.chroot as install-sysible-linux.desktop). Leave ours untouched.
-rm -f /usr/share/applications/calamares.desktop \
-      /usr/share/applications/calamares-debian.desktop \
-      /usr/share/applications/install-debian.desktop
+# Remove every stock Calamares launcher (upstream "Install System", Debian's
+# "Install Debian", etc.) so only Sysible's own "Install Sysible Linux" appears.
+# Match by Exec=calamares or an installer Name, but never touch our own launchers.
+for f in /usr/share/applications/*.desktop; do
+    [ -f "$f" ] || continue
+    case "$f" in
+        */install-sysible-linux.desktop|*/sysible-controller-install.desktop) continue ;;
+    esac
+    if grep -qiE '^Exec=.*calamares' "$f" 2>/dev/null \
+       || grep -qiE '^(Name|GenericName)=[[:space:]]*(Install System|Install Debian|Calamares)' "$f" 2>/dev/null; then
+        rm -f "$f"
+    fi
+done
 
 # Refresh the icon cache so the Sysible SysTerm icon (shipped via includes.chroot
 # to override the packaged one) and other hicolor icons resolve.
@@ -93,6 +101,17 @@ if [ -f /etc/calamares/settings.conf ]; then
     sed -i 's|^\([[:space:]]*-\?[[:space:]]*\)branding:.*|\1branding: sysible|' /etc/calamares/settings.conf
     grep -q 'branding: sysible' /etc/calamares/settings.conf || \
         printf '\nbranding: sysible\n' >> /etc/calamares/settings.conf
+fi
+
+# Boot/shutdown splash: make the shipped Sysible Plymouth theme the default so
+# boot and reboot show the Sysible mark, not Debian's "debian 12" splash. This
+# writes the default into the live rootfs; the installer copies it to disk and
+# rebuilds the target initramfs, so installed systems inherit it too.
+if command -v plymouth-set-default-theme >/dev/null 2>&1; then
+    plymouth-set-default-theme sysible 2>/dev/null || true
+    # Rebuild the live initramfs so the live boot uses it as well (harmless if
+    # this warns inside the chroot).
+    update-initramfs -u 2>/dev/null || true
 fi
 
 # Compile the shipped gschema override (enables desktop icons + SysTerm terminal).
