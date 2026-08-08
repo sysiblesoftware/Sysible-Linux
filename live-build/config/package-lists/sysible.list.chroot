@@ -10,12 +10,11 @@ calamares-settings-debian
 # sharing) — Sysible Linux commonly runs in a VM, incl. Fusion on Apple Silicon.
 open-vm-tools
 open-vm-tools-desktop
-# Right-click "Open in SysTerm": Nautilus python extension + desktop icons (which
-# add "Open Terminal" to the desktop's right-click menu).
+# Right-click "Open in SysTerm": Nautilus python extension. The GNOME desktop-
+# icons (DING) and dash-to-dock extensions are installed best-effort by the
+# system hook (their Debian package names vary), so a missing one never aborts
+# the ISO build.
 python3-nautilus
-gnome-shell-extension-desktop-icons-ng
-# Ubuntu-style bottom dock + the apps pinned to it.
-gnome-shell-extension-dash-to-dock
 firefox-esr
 gnome-text-editor
 # net-tools is already pulled via the metapackage; listed here explicitly so
