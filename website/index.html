@@ -225,30 +225,24 @@
             <button role="tab" data-arch="arm64" aria-selected="false">arm64 · Apple&nbsp;Silicon</button>
           </div>
 
-          <div class="note">
-            <span class="dot">▲</span>
-            <span>The ISO is ~3.4&nbsp;GB — over GitHub’s 2&nbsp;GB per-file limit — so each release ships as
-              numbered <span class="mono">.part</span> files you download and reassemble. It takes one command.</span>
-          </div>
-
           <!-- per-arch content, swapped by the segmented control -->
           <div class="arch-block" data-arch="amd64">
-            <div class="step-label">1 · Download the parts &amp; checksums</div>
+            <div class="step-label">1 · Download the ISO</div>
             <div class="files" data-role="files"><!-- injected --></div>
-            <div class="step-label">2 · Verify &amp; reassemble</div>
+            <div class="step-label">2 · Verify the download (optional)</div>
             <div class="code">
               <button class="copy">Copy</button>
-              <pre data-role="reassemble"></pre>
+              <pre data-role="verify"></pre>
             </div>
             <div class="muted-links" data-role="links"></div>
           </div>
           <div class="arch-block hidden" data-arch="arm64">
-            <div class="step-label">1 · Download the parts &amp; checksums</div>
+            <div class="step-label">1 · Download the ISO</div>
             <div class="files" data-role="files"></div>
-            <div class="step-label">2 · Verify &amp; reassemble</div>
+            <div class="step-label">2 · Verify the download (optional)</div>
             <div class="code">
               <button class="copy">Copy</button>
-              <pre data-role="reassemble"></pre>
+              <pre data-role="verify"></pre>
             </div>
             <div class="muted-links" data-role="links"></div>
           </div>
@@ -257,7 +251,7 @@
             <summary>Install in VMware Fusion (Apple Silicon &amp; Intel)</summary>
             <div class="g-body">
               <ol>
-                <li>Reassemble the ISO (above) and keep the single <code>.iso</code> file.</li>
+                <li>Download the <code>.iso</code> for your architecture (above).</li>
                 <li>Fusion → <b>File → New</b> → <b>Install from disc or image</b> → choose the ISO.</li>
                 <li>When asked for the OS, pick <b>Linux → Debian 12.x</b> (64-bit ARM on Apple Silicon, 64-bit on Intel).</li>
                 <li>Give it <b>4&nbsp;GB+ RAM</b> and <b>40&nbsp;GB+ disk</b>; enable virtualization extensions if you’ll run containers/VMs.</li>
@@ -273,7 +267,7 @@
             <summary>Write to a USB stick &amp; boot bare metal</summary>
             <div class="g-body">
               <ol>
-                <li>Reassemble the ISO, then verify the whole-image checksum with <code>sha256sum -c</code>.</li>
+                <li>Download the ISO, then (optionally) verify its checksum with <code>sha256sum -c SHA256SUMS</code>.</li>
                 <li>Write it with <code>dd</code>, <b>balenaEtcher</b>, or <b>Rufus</b> (Windows): the image is
                   hybrid/isohybrid, so it boots on both UEFI and BIOS.</li>
                 <li>Boot from the stick and choose <b>Sysible Linux (Live)</b> or <b>Install Sysible Linux</b>.</li>
@@ -371,8 +365,22 @@ install-sysible-controller</pre>
 <script>
 (function(){
   "use strict";
-  var LINUX_REPO = "sysiblesoftware/Sysible-Linux";
   var CTRL_REPO  = "sysiblesoftware/sysible-controller";
+
+  /* ---------- Sysible Linux download config (self-hosted) ----------
+     ISOs are hosted on our own site, not GitHub. Edit BASE_URL to point
+     at wherever the files live; the per-arch filenames and the version
+     string below are the only other things to bump on a new release.   */
+  var LINUX_DL = {
+    BASE_URL: "https://downloads.sysible.io",   // <-- swap for your real host
+    version:  "0.1.0",
+    codename: "Ignition",
+    sha:      "SHA256SUMS",                      // checksum manifest (all arches)
+    iso: {
+      amd64: "sysible-linux-0.1-amd64.iso",
+      arm64: "sysible-linux-0.1-arm64.iso"
+    }
+  };
 
   /* ---------- theme toggle ---------- */
   var root = document.documentElement, tbtn = document.getElementById("themeToggle");
@@ -415,64 +423,41 @@ install-sysible-controller</pre>
     while(b>=1024&&i<u.length-1){b/=1024;i++;} return (b>=100||i===0?Math.round(b):b.toFixed(1))+" "+u[i]; }
   function el(tag, cls, html){ var e=document.createElement(tag); if(cls)e.className=cls; if(html!=null)e.innerHTML=html; return e; }
   function archOf(name){ if(/arm64|aarch64/i.test(name)) return "arm64"; if(/amd64|x86[_-]?64/i.test(name)) return "amd64"; return null; }
-  function baseOf(partName){ return partName.replace(/\.\d+\.part$/i, ""); }
 
   function fileRow(a, small){
     var e = el("a", "file"+(small?" small":""));
     e.href = a.browser_download_url; e.rel="noopener";
     e.appendChild(el("span","fn mono", a.name));
-    e.appendChild(el("span","fmeta", fmtSize(a.size)));
+    if(a.size!=null) e.appendChild(el("span","fmeta", fmtSize(a.size)));
     e.appendChild(el("span","dl",
       '<svg width="15" height="15" viewBox="0 0 16 16"><path d="M8 1v8m0 0L5 6m3 3l3-3M3 13h10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>'));
     return e;
   }
 
-  function reassembleHTML(base, arch){
-    return '<span class="cmt"># verify the downloaded parts, then reassemble &amp; check the whole image</span>\n'
-      + 'sha256sum -c SHA256SUMS.'+arch+'.parts\n'
-      + 'cat '+base+'.*.part &gt; '+base+'\n'
-      + 'sha256sum -c SHA256SUMS.'+arch;
+  function verifyHTML(iso){
+    return '<span class="cmt"># confirm the download is intact against the published checksum</span>\n'
+      + 'grep '+iso+' SHA256SUMS | sha256sum -c -';
   }
 
-  /* ---------- render Sysible Linux ---------- */
-  function renderLinux(release){
-    var assets = (release && release.assets) || [];
-    var verEl = document.querySelector("#linux-ver b");
-    if(release && release.tag_name){ verEl.textContent = release.tag_name; }
-    else { verEl.textContent = "v0.1.0"; }
+  /* ---------- render Sysible Linux (self-hosted downloads) ---------- */
+  function renderLinux(){
+    var base = LINUX_DL.BASE_URL.replace(/\/+$/,"");
+    document.querySelector("#linux-ver b").textContent = "v"+LINUX_DL.version;
 
     ["amd64","arm64"].forEach(function(arch){
       var block = document.querySelector('.arch-block[data-arch="'+arch+'"]');
       var filesEl = block.querySelector('[data-role="files"]');
-      var preEl   = block.querySelector('[data-role="reassemble"]');
+      var preEl   = block.querySelector('[data-role="verify"]');
       var linksEl = block.querySelector('[data-role="links"]');
       filesEl.innerHTML=""; linksEl.innerHTML="";
 
-      var parts=[], shas=[], reassembleDoc=null;
-      assets.forEach(function(a){
-        var an = archOf(a.name);
-        if(/\.part$/i.test(a.name) && an===arch) parts.push(a);
-        else if(/^SHA256SUMS\./i.test(a.name) && a.name.indexOf(arch)>=0) shas.push(a);
-        else if(/^REASSEMBLE\./i.test(a.name) && a.name.indexOf(arch)>=0) reassembleDoc=a;
-      });
-      parts.sort(function(p,q){ return p.name.localeCompare(q.name, undefined, {numeric:true}); });
+      var iso = LINUX_DL.iso[arch];
+      filesEl.appendChild(fileRow({ name: iso, browser_download_url: base+"/"+iso }));
+      preEl.innerHTML = verifyHTML(iso);
 
-      if(parts.length){
-        parts.forEach(function(a){ filesEl.appendChild(fileRow(a)); });
-        shas.forEach(function(a){ filesEl.appendChild(fileRow(a, true)); });
-        preEl.innerHTML = reassembleHTML(baseOf(parts[0].name), arch);
-        if(reassembleDoc){
-          var l=el("a",null,"Full reassemble notes ↗"); l.href=reassembleDoc.browser_download_url; l.rel="noopener"; linksEl.appendChild(l);
-        }
-      } else {
-        // fallback (e.g. API blocked in preview, or arch not yet published)
-        filesEl.appendChild(el("div","p-sub",
-          'Parts for <b>'+arch+'</b> load here from the latest release. Browse them directly on '
-          +'<a style="color:var(--blue)" href="https://github.com/'+LINUX_REPO+'/releases" rel="noopener">GitHub Releases ↗</a>.'));
-        preEl.innerHTML = reassembleHTML("live-image-"+arch+".hybrid.iso", arch);
-      }
-      var gh=el("a",null,"View "+arch+" release on GitHub ↗");
-      gh.href="https://github.com/"+LINUX_REPO+"/releases"; gh.rel="noopener"; linksEl.appendChild(gh);
+      var sums = el("a", null, "SHA256SUMS ↗");
+      sums.href = base+"/"+LINUX_DL.sha; sums.rel="noopener";
+      linksEl.appendChild(sums);
     });
   }
 
@@ -517,12 +502,11 @@ install-sysible-controller</pre>
       .then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; });
   }
 
-  // static-first render so the page is complete even without network:
-  renderLinux(null); renderCtrl(null);
+  // Sysible Linux ISOs are self-hosted, so this render is fully static:
+  renderLinux(); renderCtrl(null);
   drawMesh(); addEventListener("resize", drawMesh);
 
-  // then enhance with live data where the API is reachable:
-  ghLatest(LINUX_REPO).then(function(r){ if(r) renderLinux(r); });
+  // Controller releases still come from GitHub, so enhance those live:
   ghLatest(CTRL_REPO).then(function(r){ if(r) renderCtrl(r); });
 })();
 </script>
