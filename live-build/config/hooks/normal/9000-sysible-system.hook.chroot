@@ -67,6 +67,26 @@ if [ -n "$SYSTERM_BIN" ]; then
     update-alternatives --set x-terminal-emulator "$SYSTERM_BIN" 2>/dev/null || true
 fi
 
+# User avatar: GNOME's polkit dialog (e.g. the installer's "Authentication
+# Required") shows the login user's .face. Replace Debian's swirl with the
+# Sysible mark for the live user and any account created from /etc/skel.
+if [ -f /usr/share/pixmaps/sysible-face.png ]; then
+    cp -f /usr/share/pixmaps/sysible-face.png /etc/skel/.face
+    cp -f /usr/share/pixmaps/sysible-face.png /etc/skel/.face.icon 2>/dev/null || true
+    # Seed AccountsService for the usual live usernames so the avatar is set
+    # even where AccountsService takes precedence over ~/.face.
+    mkdir -p /var/lib/AccountsService/icons /var/lib/AccountsService/users
+    for u in sysible user; do
+        cp -f /usr/share/pixmaps/sysible-face.png "/var/lib/AccountsService/icons/$u"
+        cat > "/var/lib/AccountsService/users/$u" <<AS
+[User]
+Icon=/var/lib/AccountsService/icons/$u
+AS
+    done
+fi
+# Drop any Debian-branded faces that could otherwise win.
+rm -f /usr/share/pixmaps/faces/debian* 2>/dev/null || true
+
 # Point Calamares at the Sysible branding (shipped in /etc/calamares/branding/
 # sysible) so the installer reads "Sysible Linux", not "Debian GNU/Linux".
 if [ -f /etc/calamares/settings.conf ]; then

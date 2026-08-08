@@ -71,33 +71,36 @@ def _wordmark(draw, text, font, cx, y, fill, tracking):
 
 
 def render(W, H, out):
-    s = H / 480.0                      # scale factor vs the 480px reference
-    logo_h = int(150 * s)
+    # Layout is expressed as fractions of H so the art lands in the SAME place
+    # at any resolution and always stays in the top ~44% of the screen — the
+    # boot menu (isolinux vshift / GRUB's centred box) owns the lower band, so
+    # text never overlaps the artwork. Elements are rasterised at their exact
+    # pixel size (no upscaling) so they stay crisp.
     canvas = Image.new("RGBA", (W, H), BG + (255,))
 
-    # centre of the artwork band (top ~40% of the screen)
-    band_cy = int(H * 0.30)
+    logo_h = int(H * 0.24)
+    logo_top = int(H * 0.07)
+    band_cy = logo_top + logo_h // 2
 
-    canvas.alpha_composite(_hex_mesh(W, H, int(26 * s), 16))
-    canvas.alpha_composite(_glow(W, H, W // 2, band_cy, int(230 * s), BLUE, 60))
-    canvas.alpha_composite(_glow(W, H, W // 2, band_cy, int(150 * s), GREEN, 42))
+    canvas.alpha_composite(_hex_mesh(W, H, int(H * 0.055), 15))
+    canvas.alpha_composite(_glow(W, H, W // 2, band_cy, int(H * 0.48), BLUE, 60))
+    canvas.alpha_composite(_glow(W, H, W // 2, band_cy, int(H * 0.30), GREEN, 42))
 
     png = cairosvg.svg2png(url=HERE, output_height=logo_h)
     logo = Image.open(io.BytesIO(png)).convert("RGBA")
-    ly = band_cy - logo.height // 2 - int(24 * s)
-    canvas.alpha_composite(logo, ((W - logo.width) // 2, ly))
+    canvas.alpha_composite(logo, ((W - logo.width) // 2, logo_top))
 
     draw = ImageDraw.Draw(canvas)
-    fsize = int(42 * s)
+    fsize = int(H * 0.058)
     font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", fsize)
-    wy = ly + logo.height + int(20 * s)
-    _wordmark(draw, "SYSIBLE LINUX", font, W / 2, wy, FG, tracking=int(6 * s))
+    wy = logo_top + logo_h + int(H * 0.04)
+    _wordmark(draw, "SYSIBLE LINUX", font, W / 2, wy, FG, tracking=int(H * 0.013))
 
     # gradient accent underline (green -> blue), matching the logo stroke
-    uw = int(300 * s)
-    uh = max(2, int(3 * s))
+    uw = int(W * 0.40)
+    uh = max(2, int(H * 0.006))
     ux = (W - uw) // 2
-    uy = wy + fsize + int(14 * s)
+    uy = wy + fsize + int(H * 0.03)
     bar = Image.new("RGBA", (uw, uh), (0, 0, 0, 0))
     bd = ImageDraw.Draw(bar)
     for i in range(uw):
@@ -105,11 +108,12 @@ def render(W, H, out):
     canvas.alpha_composite(bar, (ux, uy))
 
     canvas.convert("RGB").save(out)
-    print("wrote %s (%dx%d)" % (out, W, H))
+    print("wrote %s (%dx%d) art-bottom=%d (%.0f%% of H)" % (out, W, H, uy + uh, 100.0 * (uy + uh) / H))
 
 
 if __name__ == "__main__":
     # GRUB / UEFI (incl. arm64): high-res, scaled by firmware to the panel.
     render(1920, 1080, "live-build/config/branding/splash.png")
-    # isolinux / BIOS: the safe, universally supported VESA mode.
-    render(640, 480, "live-build/config/bootloaders/isolinux/splash.png")
+    # isolinux / BIOS: 800x600 is crisp on VM/most firmware and is the mode set
+    # in menu.cfg (menu resolution 800 600) so it isn't upscaled/soft.
+    render(800, 600, "live-build/config/bootloaders/isolinux/splash.png")

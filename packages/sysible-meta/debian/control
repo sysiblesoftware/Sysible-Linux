@@ -39,6 +39,9 @@ Recommends:
  systerm,
 # desktop apps
  wireshark, virt-manager, virt-viewer,
+# VM guest integration (clipboard, display auto-resize, folder sharing) — Sysible
+# Linux commonly runs in a VM, incl. VMware Fusion on Apple Silicon.
+ open-vm-tools, open-vm-tools-desktop,
 # languages (bigger toolchains)
  golang, rustc, cargo, nodejs, npm, default-jdk, maven, gradle,
 # databases
