@@ -1,0 +1,5 @@
+/* Sysible brand accent for libadwaita / GTK4 apps (buttons, switches, selection,
+   focus rings). Blue anchors the accent; deep blue keeps white text legible. */
+@define-color accent_color #5580ee;
+@define-color accent_bg_color #3560d4;
+@define-color accent_fg_color #ffffff;

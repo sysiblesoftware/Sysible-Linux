@@ -34,5 +34,7 @@ slideshowAPI:            2
 style:
    sidebarBackground:    "#0d1117"
    sidebarText:          "#e6edf3"
-   sidebarTextSelect:    "#3b82f6"
-   sidebarTextHighlight: "#3b82f6"
+   # Current step: WHITE text on the brand-blue highlight bar (was blue-on-blue,
+   # which made the active step's label vanish).
+   sidebarTextSelect:    "#ffffff"
+   sidebarTextHighlight: "#5580ee"

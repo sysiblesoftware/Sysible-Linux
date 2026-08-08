@@ -1,0 +1,3 @@
+/* Sysible brand accent for GTK3 apps (selection highlight). */
+@define-color theme_selected_bg_color #3560d4;
+@define-color theme_selected_fg_color #ffffff;

@@ -21,8 +21,12 @@ HEAD = '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <linearGradient id="front" x1="0" y1="0" x2="0" y2="1">
    <stop offset="0" stop-color="#7aa2ff"/><stop offset="1" stop-color="#4f6ff0"/></linearGradient>
  </defs>
- <path d="M92 108 h116 a24 24 0 0 1 17 7 l34 34 h161 a28 28 0 0 1 28 28 v58 H64 V136 a28 28 0 0 1 28-28 z" fill="url(#back)"/>
- <path d="M64 196 h384 a24 24 0 0 1 24 24 v156 a28 28 0 0 1 -28 28 H68 a28 28 0 0 1 -28-28 V220 a24 24 0 0 1 24-24 z" fill="url(#front)"/>
+ <!-- Folder body scaled narrower (slimmer) + a touch taller about its centre;
+      glyphs are drawn afterwards at full size so they stay crisp. -->
+ <g transform="translate(256,300) scale(0.72,1.06) translate(-256,-300)">
+  <path d="M92 108 h116 a24 24 0 0 1 17 7 l34 34 h161 a28 28 0 0 1 28 28 v58 H64 V136 a28 28 0 0 1 28-28 z" fill="url(#back)"/>
+  <path d="M64 196 h384 a24 24 0 0 1 24 24 v156 a28 28 0 0 1 -28 28 H68 a28 28 0 0 1 -28-28 V220 a24 24 0 0 1 24-24 z" fill="url(#front)"/>
+ </g>
 '''
 FOOT = "</svg>\n"
 

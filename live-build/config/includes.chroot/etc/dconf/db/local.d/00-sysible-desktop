@@ -1,0 +1,24 @@
+# Sysible desktop defaults (system db → authoritative default for every user;
+# a gschema default for org.gnome.shell was being overridden by GNOME's own
+# session write, so the dock reverted to Firefox/Files/Software/Help).
+[org/gnome/shell]
+favorite-apps=['org.gnome.TextEditor.desktop', 'code.desktop', 'systerm.desktop', 'firefox-esr.desktop', 'org.gnome.Nautilus.desktop']
+enabled-extensions=['ding@rastersoft.com', 'dash-to-dock@micxgx.gmail.com']
+
+[org/gnome/shell/extensions/dash-to-dock]
+dock-position='BOTTOM'
+extend-height=false
+dock-fixed=true
+intellihide=false
+show-show-apps-button=true
+show-apps-at-top=false
+show-trash=false
+show-mounts=false
+custom-theme-shrink=true
+transparency-mode='FIXED'
+background-opacity=0.85
+custom-background-color=true
+background-color='#0d1117'
+
+[org/gnome/desktop/interface]
+color-scheme='prefer-dark'
