@@ -24,3 +24,6 @@ net-tools
 # theme as default and rebuilds the initramfs), replacing Debian's Plymouth theme.
 plymouth
 plymouth-themes
+# glib-compile-resources — used by the system hook to rebuild the GNOME Shell
+# theme gresource with the Sysible lock/login background.
+libglib2.0-dev-bin

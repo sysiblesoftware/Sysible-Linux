@@ -114,5 +114,64 @@ if command -v plymouth-set-default-theme >/dev/null 2>&1; then
     update-initramfs -u 2>/dev/null || true
 fi
 
+# Lock / login screen: brand the GDM greeter + unlock dialog with the Sysible
+# background by rebuilding the GNOME Shell theme gresource (the reliable method
+# on Debian, where the greeter ignores the desktop-background gsetting). Entirely
+# best-effort: if the tools or the gresource are missing, the stock theme is left
+# untouched and the build proceeds.
+GRES=/usr/share/gnome-shell/gnome-shell-theme.gresource
+LOGIN_BG=/usr/share/backgrounds/sysible/sysible-login.png
+if command -v gresource >/dev/null 2>&1 && command -v glib-compile-resources >/dev/null 2>&1 \
+   && [ -f "$GRES" ] && [ -f "$LOGIN_BG" ]; then
+    WORK=$(mktemp -d)
+    ok=1
+    for res in $(gresource list "$GRES" 2>/dev/null); do
+        rel=${res#/org/gnome/shell/theme/}
+        mkdir -p "$WORK/$(dirname "$rel")"
+        gresource extract "$GRES" "$res" > "$WORK/$rel" 2>/dev/null || ok=0
+    done
+    if [ "$ok" = 1 ]; then
+        cp "$LOGIN_BG" "$WORK/sysible-login.png"
+        # Style the greeter/unlock background in every stylesheet the theme ships.
+        for css in gnome-shell.css gnome-shell-dark.css gnome-shell-light.css gnome-shell-high-contrast.css gdm.css gdm3.css; do
+            [ -f "$WORK/$css" ] || continue
+            cat >> "$WORK/$css" <<'CSS'
+
+/* Sysible lock / login background */
+#lockDialogGroup {
+  background: #0a0d13 url('resource:///org/gnome/shell/theme/sysible-login.png');
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+CSS
+        done
+        # Rebuild the gresource with all extracted files plus our additions.
+        {
+            echo '<?xml version="1.0" encoding="UTF-8"?>'
+            echo '<gresources><gresource prefix="/org/gnome/shell/theme">'
+            ( cd "$WORK" && find . -type f ! -name 'sysible.gresource.xml' \
+                | sed 's|^\./||' | sort | while read -r f; do echo "  <file>$f</file>"; done )
+            echo '</gresource></gresources>'
+        } > "$WORK/sysible.gresource.xml"
+        ( cd "$WORK" && glib-compile-resources --sourcedir="$WORK" \
+            --target="$GRES" sysible.gresource.xml ) 2>/dev/null \
+            && echo "Sysible: GDM lock/login background applied" \
+            || echo "Sysible: gresource rebuild skipped (kept stock theme)"
+    fi
+    rm -rf "$WORK"
+fi
+
+# Also register the login image with GNOME's background chooser default for the
+# greeter (harmless where the gresource method already handles it).
+mkdir -p /etc/dconf/db/gdm.d
+cat > /etc/dconf/db/gdm.d/10-sysible-background <<'DCONF'
+[org/gnome/desktop/background]
+picture-uri='file:///usr/share/backgrounds/sysible/sysible-login.png'
+picture-uri-dark='file:///usr/share/backgrounds/sysible/sysible-login.png'
+picture-options='zoom'
+DCONF
+dconf update 2>/dev/null || true
+
 # Compile the shipped gschema override (enables desktop icons + SysTerm terminal).
 glib-compile-schemas /usr/share/glib-2.0/schemas 2>/dev/null || true
