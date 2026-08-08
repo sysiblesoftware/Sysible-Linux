@@ -155,15 +155,19 @@ PY
             -map "$WORK/sysible-splash.png" /boot/grub/sysible-splash.png \
             $MAP_LIVE \
             -commit 2>&1 | tail -4
+        # Post-commit verification is debug-only and MUST NOT fail the build.
+        # On arm64 there is no isolinux, so extracting /isolinux/live.cfg errors;
+        # guard every check with `|| true` so the (already-committed) branding
+        # isn't undone by a failing diagnostic under `set -e`.
         echo "-- isolinux live.cfg AFTER --"
-        $SUDO xorriso -osirrox on -indev "$ISO" -extract /isolinux/live.cfg "$WORK/live-after.cfg" 2>/dev/null
-        grep -iE 'menu label|label install' "$WORK/live-after.cfg" 2>/dev/null | head
+        $SUDO xorriso -osirrox on -indev "$ISO" -extract /isolinux/live.cfg "$WORK/live-after.cfg" 2>/dev/null || true
+        grep -iE 'menu label|label install' "$WORK/live-after.cfg" 2>/dev/null | head || true
         echo "-- grub.cfg AFTER (re-extracted from ISO) --"
-        $SUDO xorriso -osirrox on -indev "$ISO" -extract /boot/grub/grub.cfg "$WORK/after.cfg" 2>/dev/null
-        grep -iE 'menuentry|background_image|Sysible|Live system' "$WORK/after.cfg" | head -20
+        $SUDO xorriso -osirrox on -indev "$ISO" -extract /boot/grub/grub.cfg "$WORK/after.cfg" 2>/dev/null || true
+        grep -iE 'menuentry|background_image|Sysible|Live system' "$WORK/after.cfg" 2>/dev/null | head -20 || true
         echo "-- boot structures still present? --"
-        $SUDO xorriso -indev "$ISO" -report_el_torito plain 2>&1 | grep -iE 'El Torito|Boot|Platform|catalog' | head
-        $SUDO xorriso -indev "$ISO" -report_system_area plain 2>&1 | grep -iE 'ISO|MBR|GPT|isohybrid|System area type' | head
+        $SUDO xorriso -indev "$ISO" -report_el_torito plain 2>&1 | grep -iE 'El Torito|Boot|Platform|catalog' | head || true
+        $SUDO xorriso -indev "$ISO" -report_system_area plain 2>&1 | grep -iE 'ISO|MBR|GPT|isohybrid|System area type' | head || true
     else
         echo "!! could not extract /boot/grub/grub.cfg from $ISO"
     fi
