@@ -33,3 +33,15 @@ rm -f /usr/share/applications/calamares.desktop \
 # Refresh the icon cache so the Sysible SysTerm icon (shipped via includes.chroot
 # to override the packaged one) and other hicolor icons resolve.
 gtk-update-icon-cache -f /usr/share/icons/hicolor 2>/dev/null || true
+gtk-update-icon-cache -f /usr/share/icons/Adwaita 2>/dev/null || true
+
+# Point Calamares at the Sysible branding (shipped in /etc/calamares/branding/
+# sysible) so the installer reads "Sysible Linux", not "Debian GNU/Linux".
+if [ -f /etc/calamares/settings.conf ]; then
+    sed -i 's|^\([[:space:]]*-\?[[:space:]]*\)branding:.*|\1branding: sysible|' /etc/calamares/settings.conf
+    grep -q 'branding: sysible' /etc/calamares/settings.conf || \
+        printf '\nbranding: sysible\n' >> /etc/calamares/settings.conf
+fi
+
+# Compile the shipped gschema override (enables desktop icons + SysTerm terminal).
+glib-compile-schemas /usr/share/glib-2.0/schemas 2>/dev/null || true

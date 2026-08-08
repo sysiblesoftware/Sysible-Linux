@@ -59,7 +59,7 @@
     const tx=cx+17*k+R*0.6,wSize=R*0.62,tSize=R*0.235,white=light?'#14203a':'#eaeef6',accent=light?'#2f60d4':'#6f9bff',mut=light?'rgba(40,55,85,0.72)':'rgba(160,175,200,0.85)';
     x.textAlign='left';x.textBaseline='alphabetic';x.font='700 '+wSize+'px '+SANS;try{x.letterSpacing=(wSize*0.015)+'px';}catch(e){}
     const wy=cy+wSize*0.06;let px=tx;x.fillStyle=white;x.fillText('SYSIBLE',px,wy);px+=x.measureText('SYSIBLE').width;x.fillStyle=accent;x.fillText('·',px,wy);px+=x.measureText('·').width;x.fillStyle=white;x.fillText('LINUX',px,wy);
-    x.font='500 '+tSize+'px '+MONO;try{x.letterSpacing=(tSize*0.2)+'px';}catch(e){}x.fillStyle=mut;x.fillText('DEBIAN-BASED ENGINEERING WORKSTATION',tx,cy+R*0.62+tSize);try{x.letterSpacing='0px';}catch(e){}}
+    /* tagline removed */ }
 
   // ---- SysTerm badge + center variations ----
   function sysTermBadge(x,cx,cy,R){const k=R/20;

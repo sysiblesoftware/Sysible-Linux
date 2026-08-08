@@ -10,3 +10,14 @@ calamares-settings-debian
 # sharing) — Sysible Linux commonly runs in a VM, incl. Fusion on Apple Silicon.
 open-vm-tools
 open-vm-tools-desktop
+# Right-click "Open in SysTerm": Nautilus python extension + desktop icons (which
+# add "Open Terminal" to the desktop's right-click menu).
+python3-nautilus
+gnome-shell-extension-desktop-icons-ng
+# Ubuntu-style bottom dock + the apps pinned to it.
+gnome-shell-extension-dash-to-dock
+firefox-esr
+gnome-text-editor
+# net-tools is already pulled via the metapackage; listed here explicitly so
+# ifconfig is guaranteed present (its PATH is fixed via /etc/profile.d).
+net-tools

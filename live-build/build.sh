@@ -103,15 +103,16 @@ echo "GRUB-DEBUG: xorriso=$(command -v xorriso 2>/dev/null || echo NONE)"
 ISO=$(find . -maxdepth 1 -name '*.hybrid.iso' 2>/dev/null | head -1)
 echo "GRUB-DEBUG: selected ISO=[$ISO]"
 if [ -n "$ISO" ]; then
-    echo "===== branding GRUB + adding installer entry in $ISO ====="
+    echo "===== branding GRUB + isolinux, adding installer entry in $ISO ====="
     WORK=$(mktemp -d)
     $SUDO xorriso -osirrox on -indev "$ISO" -extract /boot/grub/grub.cfg "$WORK/grub.cfg" 2>/dev/null || true
+    $SUDO xorriso -osirrox on -indev "$ISO" -extract /isolinux/live.cfg "$WORK/live.cfg" 2>/dev/null || true
     if [ -s "$WORK/grub.cfg" ]; then
         echo "-- grub.cfg BEFORE --"; grep -iE 'menuentry|background_image|Live system|Debian' "$WORK/grub.cfg" | head
         cp config/branding/splash.png "$WORK/sysible-splash.png"
-        # Rebrand titles, add a Sysible background, and clone the live entry into
-        # an "Install Sysible Linux" entry (adds sysible.install to the cmdline,
-        # which the live session's autostart uses to launch Calamares).
+        # GRUB: rebrand titles, add a Sysible background, and clone the live entry
+        # into an "Install Sysible Linux" entry (adds sysible.install to the
+        # cmdline, which the live session's autostart uses to launch Calamares).
         python3 - "$WORK/grub.cfg" <<'PY'
 import sys, re
 p = sys.argv[1]; s = open(p).read()
@@ -128,10 +129,35 @@ hdr = ('insmod png\nif background_image /boot/grub/sysible-splash.png; then true
        'set menu_color_highlight=white/blue\n')
 open(p, 'w').write(hdr + s)
 PY
+        # isolinux (BIOS): rebrand the entry labels + clone an install entry.
+        MAP_LIVE=""
+        if [ -s "$WORK/live.cfg" ]; then
+            echo "-- isolinux live.cfg BEFORE --"; grep -iE 'label|menu label|append' "$WORK/live.cfg" | head
+            python3 - "$WORK/live.cfg" <<'PY'
+import sys, re
+p = sys.argv[1]; s = open(p).read()
+s = re.sub(r'(menu label \^?)Live system \((.*?) fail-safe mode\)', r'\1Sysible Linux (Live, safe) [\2]', s)
+s = re.sub(r'(menu label \^?)Live system \((.*?)\)', r'\1Sysible Linux (Live) [\2]', s)
+m = re.search(r'(^label[^\n]*\n(?:[ \t]+[^\n]*\n)+)', s, re.M)
+if m:
+    b = m.group(1)
+    b = re.sub(r'^label[^\n]*', 'label install-sysible', b, count=1, flags=re.M)
+    b = re.sub(r'menu label [^\n]*', 'menu label ^Install Sysible Linux', b, count=1)
+    b = re.sub(r'[ \t]*menu default[ \t]*\n', '', b)
+    b = re.sub(r'(append[^\n]*)', r'\1 sysible.install', b, count=1)
+    s = s + "\n" + b + "\n"
+open(p, 'w').write(s)
+PY
+            MAP_LIVE="-map $WORK/live.cfg /isolinux/live.cfg"
+        fi
         $SUDO xorriso -boot_image any keep -dev "$ISO" \
             -map "$WORK/grub.cfg" /boot/grub/grub.cfg \
             -map "$WORK/sysible-splash.png" /boot/grub/sysible-splash.png \
+            $MAP_LIVE \
             -commit 2>&1 | tail -4
+        echo "-- isolinux live.cfg AFTER --"
+        $SUDO xorriso -osirrox on -indev "$ISO" -extract /isolinux/live.cfg "$WORK/live-after.cfg" 2>/dev/null
+        grep -iE 'menu label|label install' "$WORK/live-after.cfg" 2>/dev/null | head
         echo "-- grub.cfg AFTER (re-extracted from ISO) --"
         $SUDO xorriso -osirrox on -indev "$ISO" -extract /boot/grub/grub.cfg "$WORK/after.cfg" 2>/dev/null
         grep -iE 'menuentry|background_image|Sysible|Live system' "$WORK/after.cfg" | head -20
