@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Sysible Linux desktop installer icon
+Exec=sysible-live-desktop-icon
+Terminal=false
+NoDisplay=true
+X-GNOME-Autostart-enabled=true

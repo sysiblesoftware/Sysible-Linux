@@ -11,6 +11,10 @@ dock-position='BOTTOM'
 extend-height=false
 dock-fixed=true
 intellihide=false
+# The dock pins only the five apps in favorite-apps (SysTerm, Firefox, VS Code,
+# Text Editor, Files). The "Show Applications" grid button gives access to
+# everything else, so keep it on and put it at the end of the dock.
+show-show-apps-button=true
 show-apps-at-top=false
 show-trash=false
 show-mounts=false

@@ -1,0 +1,19 @@
+#!/bin/sh
+# Put the "Install Sysible Linux" launcher on the desktop — but ONLY in the live
+# session, i.e. when Sysible Linux is running from the ISO and is not yet
+# installed to disk. Debian live boots with `boot=live` on the kernel command
+# line; an installed system does not, so that flag is our "not installed" test.
+# (Once Calamares installs to disk, the icon simply won't be recreated.)
+grep -qw boot=live /proc/cmdline 2>/dev/null || exit 0
+
+SRC=/usr/share/applications/install-sysible-linux.desktop
+[ -f "$SRC" ] || exit 0
+
+DESK="$HOME/Desktop"
+mkdir -p "$DESK"
+cp -f "$SRC" "$DESK/install-sysible-linux.desktop"
+chmod +x "$DESK/install-sysible-linux.desktop"
+
+# Mark it trusted so GNOME / desktop-icons-ng launches it on double-click
+# instead of showing the "untrusted launcher" prompt.
+gio set "$DESK/install-sysible-linux.desktop" metadata::trusted true 2>/dev/null || true
