@@ -40,6 +40,16 @@ rm -f /usr/share/applications/calamares.desktop \
 gtk-update-icon-cache -f /usr/share/icons/hicolor 2>/dev/null || true
 gtk-update-icon-cache -f /usr/share/icons/Adwaita 2>/dev/null || true
 
+# Make SysTerm the system-wide terminal so "Open Terminal" everywhere — the
+# desktop-icons (DING) right-click menu, file managers, and apps that spawn
+# x-terminal-emulator — all launch SysTerm.
+SYSTERM_BIN=$(command -v systerm 2>/dev/null || true)
+[ -x /usr/bin/systerm ] && SYSTERM_BIN=/usr/bin/systerm
+if [ -n "$SYSTERM_BIN" ]; then
+    update-alternatives --install /usr/bin/x-terminal-emulator x-terminal-emulator "$SYSTERM_BIN" 60 2>/dev/null || true
+    update-alternatives --set x-terminal-emulator "$SYSTERM_BIN" 2>/dev/null || true
+fi
+
 # Point Calamares at the Sysible branding (shipped in /etc/calamares/branding/
 # sysible) so the installer reads "Sysible Linux", not "Debian GNU/Linux".
 if [ -f /etc/calamares/settings.conf ]; then
