@@ -25,7 +25,7 @@
     x.fillStyle=light?'#43a047':'#63c869';x.fillRect(cx+3*k,cy+4*k,5*k,5*k);
     x.save();x.textAlign='center';x.textBaseline='top';try{x.letterSpacing=(R*0.05)+'px';}catch(e){}x.font='600 '+(R*0.30)+'px '+SANS;x.fillStyle=light?'rgba(28,42,66,0.9)':'rgba(214,223,238,0.92)';x.fillText('SYSIBLE·LINUX',cx,cy+R*1.5);x.restore();}
   function drawMesh(x,W,H,light){const s=H/1080;light?bgLin(x,W,H,'#eef1f7','#dfe4ee'):bgLin(x,W,H,'#090b10','#12151e');
-    const r=52*s,hw=Math.sqrt(3)*r,vh=1.5*r,gx=W*0.5,gy=H*0.44,gR=Math.min(W,H)*0.52,faint=light?'rgba(58,84,132,0.11)':'rgba(150,170,200,0.055)';
+    const r=30*s,hw=Math.sqrt(3)*r,vh=1.5*r,gx=W*0.5,gy=H*0.44,gR=Math.min(W,H)*0.52,faint=light?'rgba(58,84,132,0.11)':'rgba(150,170,200,0.055)';
     let row=0;for(let cy=-r;cy<H+r;cy+=vh,row++){const off=(row%2)?hw/2:0;for(let cx=-r+off;cx<W+r;cx+=hw){const d=Math.hypot(cx-gx,cy-gy);hexPath(x,cx,cy,r*0.93);
       if(d<gR){const t=1-d/gR,fx=clamp((cx-(gx-gR))/(2*gR),0,1);x.fillStyle=rgba(mixc('#43a047','#3560d4',fx),(light?0.05:0.06)+(light?0.15:0.30)*t*t);x.fill();
         const sc=light?mixc('#2f8f3c','#2f60d4',fx):mixc('#63c869','#5580ee',fx);x.lineWidth=1.1*s;x.strokeStyle=rgba(sc,(light?0.13:0.16)+(light?0.42:0.55)*t);x.stroke();
