@@ -110,5 +110,29 @@ jobs:
             release/*.part
             release/SHA256SUMS.*
             release/REASSEMBLE.*.md
-          generate_release_notes: true
+          # A fixed, clean body. amd64 and arm64 publish to the same tag, so keep
+          # append_body off and don't auto-generate notes (that appended a
+          # duplicate changelog line on every publish).
+          generate_release_notes: false
+          append_body: false
+          body: |
+            **Sysible Linux 0.1 “Ignition”** — the engineering & automation workstation.
+
+            A live Debian-stable image with the whole toolchain baked in: containers,
+            Kubernetes, infrastructure-as-code, cloud CLIs, VS Code and the SysTerm
+            terminal — plus the Sysible Controller CE installer.
+
+            ### Downloads (amd64 & arm64)
+            The ISO is ~3.4 GB, over GitHub's 2 GB per-file limit, so each build ships
+            as numbered `*.part` files. Download every `*.part` for your architecture
+            plus the two `SHA256SUMS.<arch>*` files, then reassemble:
+
+            ```sh
+            sha256sum -c SHA256SUMS.<arch>.parts   # verify the parts
+            cat live-image-<arch>.hybrid.iso.*.part > live-image-<arch>.hybrid.iso
+            sha256sum -c SHA256SUMS.<arch>          # verify the whole ISO
+            ```
+
+            See `REASSEMBLE.<arch>.md` for the exact commands. Live/installer login:
+            `sysible` / `sysible`.
           fail_on_unmatched_files: true
