@@ -1,0 +1,20 @@
+#!/bin/sh
+# Compatibility shim so any "Open Terminal" — the GNOME desktop-icons (DING)
+# right-click menu, file managers, and apps that invoke gnome-terminal / kgx /
+# x-terminal-emulator — opens SysTerm in the current directory. Accepts and
+# ignores the usual terminal options; if a command is passed (-e/-x/--command/--)
+# it is run inside SysTerm.
+dir=""; cmd=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --working-directory=*) dir="${1#*=}" ;;
+    --working-directory)   shift; dir="$1" ;;
+    -e|-x|--command)       shift; cmd="$*"; break ;;
+    --)                    shift; cmd="$*"; break ;;
+    *) : ;;
+  esac
+  shift
+done
+[ -n "$dir" ] && cd "$dir" 2>/dev/null
+[ -n "$cmd" ] && exec systerm -e sh -c "$cmd"
+exec systerm

@@ -74,6 +74,14 @@ if [ -n "$SYSTERM_BIN" ]; then
     update-alternatives --install /usr/bin/x-terminal-emulator x-terminal-emulator "$SYSTERM_BIN" 60 2>/dev/null || true
     update-alternatives --set x-terminal-emulator "$SYSTERM_BIN" 2>/dev/null || true
 fi
+# GNOME's desktop-icons "Open Terminal" probes for known terminal binaries by
+# name (gnome-terminal / kgx / gnome-console) rather than x-terminal-emulator,
+# so shim those names to the SysTerm wrapper. /usr/local/bin precedes /usr/bin
+# on PATH, so these win even if a real one is ever installed.
+chmod +x /usr/local/bin/sysible-term 2>/dev/null || true
+for t in gnome-terminal kgx gnome-console; do
+    ln -sf /usr/local/bin/sysible-term "/usr/local/bin/$t" 2>/dev/null || true
+done
 
 # User avatar: GNOME's polkit dialog (e.g. the installer's "Authentication
 # Required") shows the login user's .face. Replace Debian's swirl with the

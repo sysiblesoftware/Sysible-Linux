@@ -27,3 +27,10 @@ plymouth-themes
 # glib-compile-resources — used by the system hook to rebuild the GNOME Shell
 # theme gresource with the Sysible lock/login background.
 libglib2.0-dev-bin
+# SysTerm runtime deps (it's a GTK3/VTE terminal). The SysTerm .deb is built and
+# included by build.sh, but gnome-core doesn't pull the VTE typelib — without
+# these its dependency is unmet, so it fails to install/run and "Open Terminal"
+# does nothing. Install them explicitly so SysTerm is present and launches.
+python3-gi
+gir1.2-gtk-3.0
+gir1.2-vte-2.91
