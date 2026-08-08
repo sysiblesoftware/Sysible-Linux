@@ -353,13 +353,17 @@ install-sysible-controller</pre>
       <path d="M-6.5,-7.5 L1.2,0 L-6.5,7.5" fill="none" stroke="#7aa2ff" stroke-width="2.9" stroke-linecap="round" stroke-linejoin="round"/>
       <rect x="3.2" y="3.6" width="5.6" height="5.6" rx="1" fill="#63c869"/>
     </g>
-    <!-- Controller mark: hexagon + linked nodes (fleet) -->
+    <!-- Controller mark: hexagon + controller topology (one -> hub -> two) -->
+    <linearGradient id="ctl" x1="-12" y1="0" x2="11" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#63c869"/><stop offset="1" stop-color="#5580ee"/>
+    </linearGradient>
     <g id="mark-ctrl">
       <path d="M0,-20 L17,-10 L17,10 L0,20 L-17,10 L-17,-10 Z" fill="none" stroke="url(#sg)" stroke-width="2.5" stroke-linejoin="round"/>
-      <path d="M-8,0 L8,-8 M-8,0 L8,8" stroke="#4f9d57" stroke-width="1.7" fill="none" stroke-linecap="round"/>
-      <circle cx="-8" cy="0" r="3.3" fill="#63c869"/>
-      <circle cx="8" cy="-8" r="3.3" fill="#63c869"/>
-      <circle cx="8" cy="8" r="3.3" fill="#63c869"/>
+      <path d="M-11,0 L0,0 M0,0 L11,-8 M0,0 L11,8" stroke="url(#ctl)" stroke-width="1.7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="-11" cy="0" r="3.1" fill="#63c869"/>
+      <circle cx="0" cy="0" r="3.3" fill="#57b090"/>
+      <circle cx="11" cy="-8" r="3.1" fill="#5580ee"/>
+      <circle cx="11" cy="8" r="3.1" fill="#5580ee"/>
     </g>
   </defs>
 </svg>
